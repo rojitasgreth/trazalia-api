@@ -1,0 +1,14 @@
+// Un esquema PostgreSQL por módulo (Documento Cero §3 y §7).
+// auditoria_historico no se declara aquí: la aplicación no tiene acceso a él (BR-038).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generado/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["acceso", "auditoria"]
+}
