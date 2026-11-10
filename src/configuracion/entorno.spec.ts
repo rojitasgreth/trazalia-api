@@ -3,6 +3,10 @@ import { validarEntorno } from './entorno.js';
 const minimo = {
   DATABASE_URL: 'postgresql://trazalia_app:clave@localhost:5432/trazalia',
   ORIGEN_WEB: 'http://localhost:4200',
+  JWT_ACCESS_CLAVE_PRIVADA: 'clave-de-prueba',
+  JWT_ACCESS_CLAVE_PUBLICA: 'clave-de-prueba',
+  JWT_REFRESH_CLAVE_PRIVADA: 'clave-de-prueba',
+  JWT_REFRESH_CLAVE_PUBLICA: 'clave-de-prueba',
 };
 
 describe('validarEntorno', () => {

@@ -27,6 +27,11 @@ jobs:
       DATABASE_URL: postgresql://trazalia_app:app_dev@localhost:5432/trazalia_test
       DATABASE_URL_MIGRACIONES: postgresql://trazalia_migrador:migrador_dev@localhost:5432/trazalia_test
       ORIGEN_WEB: http://localhost:4200
+      # Par de claves EdDSA solo para CI (DP-11); no es secreto de producción.
+      JWT_ACCESS_CLAVE_PRIVADA: eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6Ii1RdkxEN3Z3TDBXTzVpUDhXbW03RGlvVzlMSzRyTk10bnlKYU9GYkQ3M0EiLCJkIjoiamVMSzFKNEJEYmdaVG9tM2U4aFZMQ0UxTml5TEVpRnZUWGlMR0RfU0hOdyJ9
+      JWT_ACCESS_CLAVE_PUBLICA: eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6Ii1RdkxEN3Z3TDBXTzVpUDhXbW03RGlvVzlMSzRyTk10bnlKYU9GYkQ3M0EifQ
+      JWT_REFRESH_CLAVE_PRIVADA: eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6IjV3S2U0NkNPdDk1UzJFUGZRNWo0MTlMTXpnblZhVzJVZV9wRnFiY3hFVlkiLCJkIjoiWm1kanQyWWtfbC1LZkMxR1F2c1VObTVRVnh6SkYxbXQwTE91S18wX2dGdyJ9
+      JWT_REFRESH_CLAVE_PUBLICA: eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6IjV3S2U0NkNPdDk1UzJFUGZRNWo0MTlMTXpnblZhVzJVZV9wRnFiY3hFVlkifQ
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

@@ -12,3 +12,128 @@ datasource db {
   provider = "postgresql"
   schemas  = ["acceso", "auditoria"]
 }
+
+enum Nacionalidad {
+  V
+  E
+
+  @@schema("acceso")
+}
+
+enum RolUsuario {
+  ADMINISTRADOR
+  FISIOTERAPEUTA
+
+  @@schema("acceso")
+}
+
+enum EstadoCuenta {
+  PENDIENTE
+  ACTIVO
+  BLOQUEADO
+  SUSPENDIDO
+  INACTIVO
+
+  @@schema("acceso")
+}
+
+// Spec Módulo A §12. id_usuario (UUID) es la referencia que usan los módulos
+// clínicos; no se asigna centro aquí (BR-006).
+model Usuario {
+  idUsuario          String       @id @default(uuid()) @map("id_usuario")
+  nacionalidad       Nacionalidad
+  cedula             String
+  nombre             String
+  apellido           String
+  correo             String       @unique
+  telefono           String?
+  nombreUsuario      String       @unique @map("nombre_usuario")
+  hashContrasena     String?      @map("hash_contrasena")
+  rol                RolUsuario
+  estado             EstadoCuenta @default(PENDIENTE)
+  fechaCreacion      DateTime     @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime     @updatedAt @map("fecha_actualizacion")
+  fechaActivacion    DateTime?    @map("fecha_activacion")
+  ultimoAcceso       DateTime?    @map("ultimo_acceso")
+  bloqueadoHasta     DateTime?    @map("bloqueado_hasta")
+
+  invitaciones        InvitacionUsuario[] @relation("invitacionDestinatario")
+  invitacionesCreadas InvitacionUsuario[] @relation("invitacionCreador")
+  sesiones            SesionUsuario[]
+
+  @@unique([nacionalidad, cedula])
+  @@map("usuarios")
+  @@schema("acceso")
+}
+
+// BR-007/008/031/032. Token de un solo uso; se guarda solo el resumen/hash.
+model InvitacionUsuario {
+  idInvitacion           String    @id @default(uuid()) @map("id_invitacion")
+  idUsuario              String    @map("id_usuario")
+  resumenToken           String    @unique @map("resumen_token")
+  fechaExpiracion        DateTime  @map("fecha_expiracion")
+  fechaConsumo           DateTime? @map("fecha_consumo")
+  idAdministradorCreador String?   @map("id_administrador_creador")
+  fechaCreacion          DateTime  @default(now()) @map("fecha_creacion")
+
+  usuario              Usuario  @relation("invitacionDestinatario", fields: [idUsuario], references: [idUsuario])
+  administradorCreador Usuario? @relation("invitacionCreador", fields: [idAdministradorCreador], references: [idUsuario])
+
+  @@map("invitaciones_usuario")
+  @@schema("acceso")
+}
+
+// Spec §9 y §12. Una fila por sesión/dispositivo (BR-021); control de rotación
+// y revocación independiente por sesión.
+model SesionUsuario {
+  idSesion            String    @id @default(uuid()) @map("id_sesion")
+  idUsuario           String    @map("id_usuario")
+  etiquetaDispositivo String?   @map("etiqueta_dispositivo")
+  resumenJtiRefresh   String    @unique @map("resumen_jti_refresh")
+  fechaCreacion       DateTime  @default(now()) @map("fecha_creacion")
+  ultimaActividad     DateTime  @default(now()) @map("ultima_actividad")
+  fechaExpiracion     DateTime  @map("fecha_expiracion")
+  fechaRevocacion     DateTime? @map("fecha_revocacion")
+  motivoRevocacion    String?   @map("motivo_revocacion")
+
+  usuario      Usuario                   @relation(fields: [idUsuario], references: [idUsuario])
+  renovaciones RegistroTokenRenovacion[]
+
+  @@map("sesiones_usuario")
+  @@schema("acceso")
+}
+
+// Spec §9.2/7.3. Permite detectar reutilización y revocar la familia de
+// refresh tokens de la sesión (AC-017).
+model RegistroTokenRenovacion {
+  idRegistroToken  String    @id @default(uuid()) @map("id_registro_token")
+  idSesion         String    @map("id_sesion")
+  resumenJti       String    @unique @map("resumen_jti")
+  fechaEmision     DateTime  @default(now()) @map("fecha_emision")
+  fechaExpiracion  DateTime  @map("fecha_expiracion")
+  fechaConsumo     DateTime? @map("fecha_consumo")
+  fechaRevocacion  DateTime? @map("fecha_revocacion")
+  reemplazadoPorId String?   @unique @map("reemplazado_por")
+
+  sesion         SesionUsuario            @relation(fields: [idSesion], references: [idSesion])
+  reemplazadoPor RegistroTokenRenovacion? @relation("cadenaRenovacion", fields: [reemplazadoPorId], references: [idRegistroToken])
+  reemplazaA     RegistroTokenRenovacion? @relation("cadenaRenovacion")
+
+  @@map("registros_token_renovacion")
+  @@schema("acceso")
+}
+
+// Spec §11. Solo Administradores consultan (Corte 5 añadirá el endpoint);
+// traslado semestral a auditoria_historico (BR-038), inaccesible desde la app.
+model EventoAuditoria {
+  idEvento          String   @id @default(uuid()) @map("id_evento")
+  idUsuarioActor    String?  @map("id_usuario_actor")
+  idUsuarioAfectado String?  @map("id_usuario_afectado")
+  tipoEvento        String   @map("tipo_evento")
+  resultado         String
+  metadatosMinimos  Json?    @map("metadatos_minimos")
+  fechaEvento       DateTime @default(now()) @map("fecha_evento")
+
+  @@map("eventos_auditoria")
+  @@schema("auditoria")
+}

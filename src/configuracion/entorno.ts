@@ -7,6 +7,13 @@ const esquemaEntorno = z.object({
   // Origen público del frontend: se usa para CORS y para validar Origin (DP-08).
   ORIGEN_WEB: z.url(),
   ZONA_HORARIA_NEGOCIO: z.string().default('America/Caracas'),
+
+  // Claves EdDSA (Ed25519) para JWT, DP-11: JWK en base64url. Generar con
+  // `npm run jwt:generar-claves`.
+  JWT_ACCESS_CLAVE_PRIVADA: z.string().min(1),
+  JWT_ACCESS_CLAVE_PUBLICA: z.string().min(1),
+  JWT_REFRESH_CLAVE_PRIVADA: z.string().min(1),
+  JWT_REFRESH_CLAVE_PUBLICA: z.string().min(1),
 });
 
 export type Entorno = z.infer<typeof esquemaEntorno>;
