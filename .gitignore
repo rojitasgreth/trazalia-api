@@ -1,0 +1,21 @@
+# Dependencias y compilados
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Cliente Prisma generado (se regenera con `npm run prisma:generar`)
+src/generado/
+
+# Secretos: nunca subir archivos .env reales (Documento Cero §16)
+.env
+.env.*
+!.env.example
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
