@@ -5,6 +5,7 @@ function crearRepositorio() {
   const invitacionUsuario = {
     create: vi.fn().mockResolvedValue({ idInvitacion: 'i1' }),
     findUnique: vi.fn().mockResolvedValue(null),
+    findFirst: vi.fn().mockResolvedValue(null),
     update: vi.fn().mockResolvedValue(undefined),
   };
   const prisma = { invitacionUsuario } as unknown as PrismaService;
@@ -32,6 +33,28 @@ describe('InvitacionRepositorio', () => {
     const { repositorio, invitacionUsuario } = crearRepositorio();
 
     await repositorio.marcarConsumida('i1');
+
+    expect(invitacionUsuario.update).toHaveBeenCalledWith({
+      where: { idInvitacion: 'i1' },
+      data: { fechaConsumo: expect.any(Date) },
+    });
+  });
+
+  it('busca la invitación vigente más reciente (no consumida, no vencida)', async () => {
+    const { repositorio, invitacionUsuario } = crearRepositorio();
+
+    await repositorio.buscarVigentePorUsuario('u1');
+
+    expect(invitacionUsuario.findFirst).toHaveBeenCalledWith({
+      where: { idUsuario: 'u1', fechaConsumo: null, fechaExpiracion: { gt: expect.any(Date) } },
+      orderBy: { fechaCreacion: 'desc' },
+    });
+  });
+
+  it('invalidar reutiliza la marca de consumida', async () => {
+    const { repositorio, invitacionUsuario } = crearRepositorio();
+
+    await repositorio.invalidar('i1');
 
     expect(invitacionUsuario.update).toHaveBeenCalledWith({
       where: { idInvitacion: 'i1' },

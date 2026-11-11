@@ -14,6 +14,14 @@ const esquemaEntorno = z.object({
   JWT_ACCESS_CLAVE_PUBLICA: z.string().min(1),
   JWT_REFRESH_CLAVE_PRIVADA: z.string().min(1),
   JWT_REFRESH_CLAVE_PUBLICA: z.string().min(1),
+
+  // Correo saliente (invitaciones, Corte 3). En desarrollo apunta a Mailpit
+  // (docker-compose), sin usuario/contraseña.
+  SMTP_HOST: z.string().min(1).default('localhost'),
+  SMTP_PUERTO: z.coerce.number().int().positive().default(1025),
+  SMTP_USUARIO: z.string().optional(),
+  SMTP_CONTRASENA: z.string().optional(),
+  CORREO_REMITENTE: z.string().default('Trazalia <no-responder@trazalia.local>'),
 });
 
 export type Entorno = z.infer<typeof esquemaEntorno>;
