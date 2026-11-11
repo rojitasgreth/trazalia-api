@@ -80,6 +80,30 @@ export class UsuarioRepositorio {
     await this.prisma.usuario.update({ where: { idUsuario }, data: { estado } });
   }
 
+  /** BR-035: bloqueo automático por intentos fallidos. */
+  async bloquear(idUsuario: string, bloqueadoHasta: Date): Promise<void> {
+    await this.prisma.usuario.update({
+      where: { idUsuario },
+      data: { estado: 'BLOQUEADO', bloqueadoHasta },
+    });
+  }
+
+  /** Levanta un BLOQUEADO: automáticamente al vencer el plazo o por un administrador. */
+  async desbloquear(idUsuario: string): Promise<void> {
+    await this.prisma.usuario.update({
+      where: { idUsuario },
+      data: { estado: 'ACTIVO', bloqueadoHasta: null },
+    });
+  }
+
+  /** BR-013/014: también levanta un BLOQUEADO, ya que probar el correo es una señal más fuerte que esperar el plazo. */
+  async actualizarContrasena(idUsuario: string, hashContrasena: string): Promise<Usuario> {
+    return this.prisma.usuario.update({
+      where: { idUsuario },
+      data: { hashContrasena, estado: 'ACTIVO', bloqueadoHasta: null },
+    });
+  }
+
   async listar(filtros: FiltrosUsuarios): Promise<PaginaUsuarios> {
     const where = {
       ...(filtros.rol ? { rol: filtros.rol } : {}),

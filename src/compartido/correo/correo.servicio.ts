@@ -16,6 +16,20 @@ export interface DatosInvitacion {
   fechaVencimiento: string;
 }
 
+export interface DatosRecuperacion {
+  para: string;
+  nombre: string;
+  usuario: string;
+  enlaceRestablecimiento: string;
+  fechaVencimiento: string;
+}
+
+export interface DatosContrasenaCambiada {
+  para: string;
+  nombre: string;
+  usuario: string;
+}
+
 function interpolar(plantilla: string, valores: Record<string, string>): string {
   return plantilla.replace(/{{\s*(\w+)\s*}}/g, (coincidencia, clave: string) =>
     clave in valores ? valores[clave] : coincidencia,
@@ -30,7 +44,7 @@ export class CorreoServicio {
   private readonly logger = new Logger(CorreoServicio.name);
   private readonly transportador: Transporter;
   private readonly remitente: string;
-  private plantillaInvitacion?: string;
+  private readonly plantillas = new Map<string, string>();
 
   constructor(config: ConfigService<Entorno, true>) {
     this.remitente = config.get('CORREO_REMITENTE', { infer: true });
@@ -51,24 +65,45 @@ export class CorreoServicio {
   }
 
   async enviarInvitacion(datos: DatosInvitacion): Promise<void> {
+    await this.enviar(datos.para, 'Te invitaron a Trazalia: activa tu cuenta', 'invitacion.html', {
+      ...datos,
+    });
+  }
+
+  /** BR-013: enlace de recuperación, DP-04: vence en 15 minutos. */
+  async enviarRecuperacion(datos: DatosRecuperacion): Promise<void> {
+    await this.enviar(datos.para, 'Restablece tu contraseña de Trazalia', 'recuperacion.html', {
+      ...datos,
+    });
+  }
+
+  /** BR-014: notificación best-effort tras un cambio de contraseña exitoso. */
+  async enviarContrasenaCambiada(datos: DatosContrasenaCambiada): Promise<void> {
+    await this.enviar(datos.para, 'Tu contraseña de Trazalia cambió', 'contrasena-cambiada.html', {
+      ...datos,
+    });
+  }
+
+  private async enviar(
+    para: string,
+    subject: string,
+    archivoPlantilla: string,
+    valores: Record<string, string>,
+  ): Promise<void> {
     try {
-      const html = interpolar(this.cargarPlantillaInvitacion(), { ...datos });
-      await this.transportador.sendMail({
-        from: this.remitente,
-        to: datos.para,
-        subject: 'Te invitaron a Trazalia: activa tu cuenta',
-        html,
-      });
+      const html = interpolar(this.cargarPlantilla(archivoPlantilla), valores);
+      await this.transportador.sendMail({ from: this.remitente, to: para, subject, html });
     } catch (error) {
-      this.logger.error(`No se pudo enviar el correo de invitación a "${datos.para}"`, error);
+      this.logger.error(`No se pudo enviar el correo "${subject}" a "${para}"`, error);
     }
   }
 
-  private cargarPlantillaInvitacion(): string {
-    this.plantillaInvitacion ??= readFileSync(
-      join(import.meta.dirname, 'plantillas', 'invitacion.html'),
-      'utf8',
-    );
-    return this.plantillaInvitacion;
+  private cargarPlantilla(archivo: string): string {
+    let plantilla = this.plantillas.get(archivo);
+    if (!plantilla) {
+      plantilla = readFileSync(join(import.meta.dirname, 'plantillas', archivo), 'utf8');
+      this.plantillas.set(archivo, plantilla);
+    }
+    return plantilla;
   }
 }

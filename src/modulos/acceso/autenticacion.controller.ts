@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { z } from 'zod';
 import { AceptarInvitacionCasoUso } from './casos-uso/aceptar-invitacion.caso-uso.js';
 import { CerrarSesionCasoUso } from './casos-uso/cerrar-sesion.caso-uso.js';
@@ -19,8 +20,12 @@ import { ListarSesionesCasoUso, type SesionPublica } from './casos-uso/listar-se
 import { ObtenerUsuarioActualCasoUso } from './casos-uso/obtener-usuario-actual.caso-uso.js';
 import { RegistrarActividadCasoUso } from './casos-uso/registrar-actividad.caso-uso.js';
 import { RenovarSesionCasoUso } from './casos-uso/renovar-sesion.caso-uso.js';
+import { RestablecerContrasenaCasoUso } from './casos-uso/restablecer-contrasena.caso-uso.js';
+import { SolicitarRecuperacionCasoUso } from './casos-uso/solicitar-recuperacion.caso-uso.js';
 import { esquemaAceptarInvitacion } from './dto/aceptar-invitacion.dto.js';
 import { esquemaIniciarSesion } from './dto/iniciar-sesion.dto.js';
+import { esquemaRestablecerContrasena } from './dto/restablecer-contrasena.dto.js';
+import { esquemaSolicitarRecuperacion } from './dto/solicitar-recuperacion.dto.js';
 import { AutenticacionGuard, type UsuarioAutenticado } from './guardias/autenticacion.guard.js';
 import { CsrfGuard } from './guardias/csrf.guard.js';
 import { UsuarioActual } from './guardias/usuario-actual.decorator.js';
@@ -38,10 +43,13 @@ export class AutenticacionController {
     private readonly listarSesiones: ListarSesionesCasoUso,
     private readonly aceptarInvitacion: AceptarInvitacionCasoUso,
     private readonly obtenerUsuarioActual: ObtenerUsuarioActualCasoUso,
+    private readonly solicitarRecuperacion: SolicitarRecuperacionCasoUso,
+    private readonly restablecerContrasena: RestablecerContrasenaCasoUso,
     private readonly cookies: CookiesServicio,
   ) {}
 
   @Post('iniciar-sesion')
+  @UseGuards(ThrottlerGuard)
   async postIniciarSesion(
     @Body({ schema: esquemaIniciarSesion }) cuerpo: z.infer<typeof esquemaIniciarSesion>,
     @Res({ passthrough: true }) res: Response,
@@ -53,11 +61,31 @@ export class AutenticacionController {
   }
 
   @Post('invitaciones/aceptar')
+  @UseGuards(ThrottlerGuard)
   async postAceptarInvitacion(
     @Body({ schema: esquemaAceptarInvitacion }) cuerpo: z.infer<typeof esquemaAceptarInvitacion>,
   ): Promise<{ estado: 'activada' }> {
     await this.aceptarInvitacion.ejecutar(cuerpo);
     return { estado: 'activada' };
+  }
+
+  @Post('contrasena/recuperar')
+  @UseGuards(ThrottlerGuard)
+  async postSolicitarRecuperacion(
+    @Body({ schema: esquemaSolicitarRecuperacion })
+    cuerpo: z.infer<typeof esquemaSolicitarRecuperacion>,
+  ): Promise<{ estado: 'ok' }> {
+    await this.solicitarRecuperacion.ejecutar(cuerpo.correo);
+    return { estado: 'ok' };
+  }
+
+  @Post('contrasena/restablecer')
+  async postRestablecerContrasena(
+    @Body({ schema: esquemaRestablecerContrasena })
+    cuerpo: z.infer<typeof esquemaRestablecerContrasena>,
+  ): Promise<{ estado: 'ok' }> {
+    await this.restablecerContrasena.ejecutar(cuerpo);
+    return { estado: 'ok' };
   }
 
   @Post('renovar')

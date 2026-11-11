@@ -9,6 +9,7 @@ import { AdminCerrarSesionCasoUso } from './casos-uso/admin-cerrar-sesion.caso-u
 import { CerrarSesionCasoUso } from './casos-uso/cerrar-sesion.caso-uso.js';
 import { CerrarTodasSesionesCasoUso } from './casos-uso/cerrar-todas-sesiones.caso-uso.js';
 import { CrearUsuarioCasoUso } from './casos-uso/crear-usuario.caso-uso.js';
+import { DesbloquearUsuarioCasoUso } from './casos-uso/desbloquear-usuario.caso-uso.js';
 import { InactivarUsuarioCasoUso } from './casos-uso/inactivar-usuario.caso-uso.js';
 import { IniciarSesionCasoUso } from './casos-uso/iniciar-sesion.caso-uso.js';
 import { ListarSesionesDeUsuarioCasoUso } from './casos-uso/listar-sesiones-de-usuario.caso-uso.js';
@@ -20,13 +21,17 @@ import { ReactivarUsuarioCasoUso } from './casos-uso/reactivar-usuario.caso-uso.
 import { ReenviarInvitacionCasoUso } from './casos-uso/reenviar-invitacion.caso-uso.js';
 import { RegistrarActividadCasoUso } from './casos-uso/registrar-actividad.caso-uso.js';
 import { RenovarSesionCasoUso } from './casos-uso/renovar-sesion.caso-uso.js';
+import { RestablecerContrasenaCasoUso } from './casos-uso/restablecer-contrasena.caso-uso.js';
+import { SolicitarRecuperacionCasoUso } from './casos-uso/solicitar-recuperacion.caso-uso.js';
 import { SuspenderUsuarioCasoUso } from './casos-uso/suspender-usuario.caso-uso.js';
 import { AutenticacionGuard } from './guardias/autenticacion.guard.js';
 import { CsrfGuard } from './guardias/csrf.guard.js';
 import { RolesGuard } from './guardias/roles.guard.js';
 import { CookiesServicio } from './jwt/cookies.servicio.js';
 import { JwtServicio } from './jwt/jwt.servicio.js';
+import { IntentoAccesoRepositorio } from './repositorios/intento-acceso.repositorio.js';
 import { InvitacionRepositorio } from './repositorios/invitacion.repositorio.js';
+import { RecuperacionRepositorio } from './repositorios/recuperacion.repositorio.js';
 import { RenovacionRepositorio } from './repositorios/renovacion.repositorio.js';
 import { SesionRepositorio } from './repositorios/sesion.repositorio.js';
 import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
@@ -44,6 +49,8 @@ import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
     SesionRepositorio,
     RenovacionRepositorio,
     InvitacionRepositorio,
+    RecuperacionRepositorio,
+    IntentoAccesoRepositorio,
     IniciarSesionCasoUso,
     RenovarSesionCasoUso,
     CerrarSesionCasoUso,
@@ -62,6 +69,9 @@ import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
     ReenviarInvitacionCasoUso,
     ListarSesionesDeUsuarioCasoUso,
     AdminCerrarSesionCasoUso,
+    DesbloquearUsuarioCasoUso,
+    SolicitarRecuperacionCasoUso,
+    RestablecerContrasenaCasoUso,
   ],
   exports: [AutenticacionGuard],
 })

@@ -57,9 +57,10 @@ model Usuario {
   ultimoAcceso       DateTime?    @map("ultimo_acceso")
   bloqueadoHasta     DateTime?    @map("bloqueado_hasta")
 
-  invitaciones        InvitacionUsuario[] @relation("invitacionDestinatario")
-  invitacionesCreadas InvitacionUsuario[] @relation("invitacionCreador")
+  invitaciones        InvitacionUsuario[]      @relation("invitacionDestinatario")
+  invitacionesCreadas InvitacionUsuario[]      @relation("invitacionCreador")
   sesiones            SesionUsuario[]
+  recuperacionesClave RecuperacionContrasena[]
 
   @@unique([nacionalidad, cedula])
   @@map("usuarios")
@@ -80,6 +81,35 @@ model InvitacionUsuario {
   administradorCreador Usuario? @relation("invitacionCreador", fields: [idAdministradorCreador], references: [idUsuario])
 
   @@map("invitaciones_usuario")
+  @@schema("acceso")
+}
+
+// BR-013/014. Token de un solo uso; se guarda solo el resumen/hash. DP-04:
+// vencimiento de 15 minutos.
+model RecuperacionContrasena {
+  idRecuperacion  String    @id @default(uuid()) @map("id_recuperacion")
+  idUsuario       String    @map("id_usuario")
+  resumenToken    String    @unique @map("resumen_token")
+  fechaExpiracion DateTime  @map("fecha_expiracion")
+  fechaConsumo    DateTime? @map("fecha_consumo")
+  fechaCreacion   DateTime  @default(now()) @map("fecha_creacion")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario])
+
+  @@map("recuperaciones_contrasena")
+  @@schema("acceso")
+}
+
+// BR-035. Fallos por identificador normalizado, exista o no la cuenta; no
+// referencia a Usuario a propósito (hay que poder contar intentos contra
+// identificadores que no corresponden a ninguna cuenta real).
+model IntentoAcceso {
+  idIntento                String   @id @default(uuid()) @map("id_intento")
+  identificadorNormalizado String   @map("identificador_normalizado")
+  fechaIntento             DateTime @default(now()) @map("fecha_intento")
+
+  @@index([identificadorNormalizado, fechaIntento])
+  @@map("intentos_acceso")
   @@schema("acceso")
 }
 
