@@ -70,6 +70,40 @@ describe('UsuarioRepositorio', () => {
     });
   });
 
+  it('bloquear fija el estado BLOQUEADO y la fecha de vencimiento (BR-035)', async () => {
+    const { repositorio, usuario } = crearRepositorio();
+    const bloqueadoHasta = new Date();
+
+    await repositorio.bloquear('u1', bloqueadoHasta);
+
+    expect(usuario.update).toHaveBeenCalledWith({
+      where: { idUsuario: 'u1' },
+      data: { estado: 'BLOQUEADO', bloqueadoHasta },
+    });
+  });
+
+  it('desbloquear vuelve a ACTIVO y limpia la fecha de vencimiento', async () => {
+    const { repositorio, usuario } = crearRepositorio();
+
+    await repositorio.desbloquear('u1');
+
+    expect(usuario.update).toHaveBeenCalledWith({
+      where: { idUsuario: 'u1' },
+      data: { estado: 'ACTIVO', bloqueadoHasta: null },
+    });
+  });
+
+  it('actualizarContrasena cambia el hash y también levanta un posible bloqueo', async () => {
+    const { repositorio, usuario } = crearRepositorio();
+
+    await repositorio.actualizarContrasena('u1', 'hash-nuevo');
+
+    expect(usuario.update).toHaveBeenCalledWith({
+      where: { idUsuario: 'u1' },
+      data: { hashContrasena: 'hash-nuevo', estado: 'ACTIVO', bloqueadoHasta: null },
+    });
+  });
+
   it('lista con filtros de texto, rol y estado, paginado', async () => {
     const { repositorio, usuario } = crearRepositorio();
     usuario.count.mockResolvedValue(1);

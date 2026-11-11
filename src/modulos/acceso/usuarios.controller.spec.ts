@@ -1,6 +1,7 @@
 import type { ActualizarUsuarioCasoUso } from './casos-uso/actualizar-usuario.caso-uso.js';
 import type { AdminCerrarSesionCasoUso } from './casos-uso/admin-cerrar-sesion.caso-uso.js';
 import type { CrearUsuarioCasoUso } from './casos-uso/crear-usuario.caso-uso.js';
+import type { DesbloquearUsuarioCasoUso } from './casos-uso/desbloquear-usuario.caso-uso.js';
 import type { InactivarUsuarioCasoUso } from './casos-uso/inactivar-usuario.caso-uso.js';
 import type { ListarSesionesDeUsuarioCasoUso } from './casos-uso/listar-sesiones-de-usuario.caso-uso.js';
 import type { ListarUsuariosCasoUso } from './casos-uso/listar-usuarios.caso-uso.js';
@@ -43,6 +44,9 @@ function crearControlador() {
   const adminCerrarSesion = {
     ejecutar: vi.fn().mockResolvedValue(undefined),
   } as unknown as AdminCerrarSesionCasoUso;
+  const desbloquearUsuario = {
+    ejecutar: vi.fn().mockResolvedValue(undefined),
+  } as unknown as DesbloquearUsuarioCasoUso;
 
   const controlador = new UsuariosController(
     crearUsuario,
@@ -55,6 +59,7 @@ function crearControlador() {
     reenviarInvitacion,
     listarSesionesDeUsuario,
     adminCerrarSesion,
+    desbloquearUsuario,
   );
 
   return {
@@ -69,6 +74,7 @@ function crearControlador() {
     reenviarInvitacion,
     listarSesionesDeUsuario,
     adminCerrarSesion,
+    desbloquearUsuario,
   };
 }
 
@@ -144,5 +150,13 @@ describe('UsuariosController', () => {
 
     expect(listarSesionesDeUsuario.ejecutar).toHaveBeenCalledWith('u1');
     expect(adminCerrarSesion.ejecutar).toHaveBeenCalledWith('admin-1', 'u1', 's1');
+  });
+
+  it('postDesbloquear delega en DesbloquearUsuarioCasoUso con el admin actuante', async () => {
+    const { controlador, desbloquearUsuario } = crearControlador();
+
+    await controlador.postDesbloquear(ADMIN, 'u1');
+
+    expect(desbloquearUsuario.ejecutar).toHaveBeenCalledWith('admin-1', 'u1');
   });
 });

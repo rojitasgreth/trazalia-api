@@ -64,4 +64,36 @@ describe('CorreoServicio', () => {
 
     await expect(servicio.enviarInvitacion(DATOS)).resolves.toBeUndefined();
   });
+
+  it('envía la recuperación con el enlace y la fecha de vencimiento (BR-013)', async () => {
+    sendMail.mockResolvedValue(undefined);
+
+    const servicio = new CorreoServicio(crearConfig());
+    await servicio.enviarRecuperacion({
+      para: 'ana@b.com',
+      nombre: 'Ana',
+      usuario: 'V123',
+      enlaceRestablecimiento: 'http://localhost:4200/restablecer-contrasena?token=abc',
+      fechaVencimiento: '11 de noviembre de 2026, 2:15 p.m.',
+    });
+
+    expect(sendMail).toHaveBeenCalledOnce();
+    const llamada = sendMail.mock.calls[0][0] as { to: string; html: string; subject: string };
+    expect(llamada.to).toBe('ana@b.com');
+    expect(llamada.subject).toBe('Restablece tu contraseña de Trazalia');
+    expect(llamada.html).toContain('http://localhost:4200/restablecer-contrasena?token=abc');
+    expect(llamada.html).not.toContain('{{enlaceRestablecimiento}}');
+  });
+
+  it('envía la notificación de cambio de contraseña (BR-014)', async () => {
+    sendMail.mockResolvedValue(undefined);
+
+    const servicio = new CorreoServicio(crearConfig());
+    await servicio.enviarContrasenaCambiada({ para: 'ana@b.com', nombre: 'Ana', usuario: 'V123' });
+
+    expect(sendMail).toHaveBeenCalledOnce();
+    const llamada = sendMail.mock.calls[0][0] as { subject: string; html: string };
+    expect(llamada.subject).toBe('Tu contraseña de Trazalia cambió');
+    expect(llamada.html).toContain('V123');
+  });
 });

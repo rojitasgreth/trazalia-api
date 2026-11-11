@@ -8,6 +8,8 @@ import type { ListarSesionesCasoUso } from './casos-uso/listar-sesiones.caso-uso
 import type { ObtenerUsuarioActualCasoUso } from './casos-uso/obtener-usuario-actual.caso-uso.js';
 import type { RegistrarActividadCasoUso } from './casos-uso/registrar-actividad.caso-uso.js';
 import type { RenovarSesionCasoUso } from './casos-uso/renovar-sesion.caso-uso.js';
+import type { RestablecerContrasenaCasoUso } from './casos-uso/restablecer-contrasena.caso-uso.js';
+import type { SolicitarRecuperacionCasoUso } from './casos-uso/solicitar-recuperacion.caso-uso.js';
 import { AutenticacionController } from './autenticacion.controller.js';
 import type { CookiesServicio } from './jwt/cookies.servicio.js';
 
@@ -45,6 +47,12 @@ function crearControlador() {
   const obtenerUsuarioActual = {
     ejecutar: vi.fn().mockResolvedValue({ idUsuario: 'u1' }),
   } as unknown as ObtenerUsuarioActualCasoUso;
+  const solicitarRecuperacion = {
+    ejecutar: vi.fn().mockResolvedValue(undefined),
+  } as unknown as SolicitarRecuperacionCasoUso;
+  const restablecerContrasena = {
+    ejecutar: vi.fn().mockResolvedValue(undefined),
+  } as unknown as RestablecerContrasenaCasoUso;
   const cookies = {
     establecerAcceso: vi.fn(),
     establecerRenovacion: vi.fn(),
@@ -60,6 +68,8 @@ function crearControlador() {
     listarSesiones,
     aceptarInvitacion,
     obtenerUsuarioActual,
+    solicitarRecuperacion,
+    restablecerContrasena,
     cookies,
   );
 
@@ -73,6 +83,8 @@ function crearControlador() {
     listarSesiones,
     aceptarInvitacion,
     obtenerUsuarioActual,
+    solicitarRecuperacion,
+    restablecerContrasena,
     cookies,
   };
 }
@@ -175,5 +187,29 @@ describe('AutenticacionController', () => {
 
     expect(respuesta).toEqual({ usuario: { idUsuario: 'u1' } });
     expect(obtenerUsuarioActual.ejecutar).toHaveBeenCalledWith('u1');
+  });
+
+  it('solicitar recuperación delega en el caso de uso y responde siempre "ok"', async () => {
+    const { controlador, solicitarRecuperacion } = crearControlador();
+
+    const respuesta = await controlador.postSolicitarRecuperacion({ correo: 'a@b.com' });
+
+    expect(respuesta).toEqual({ estado: 'ok' });
+    expect(solicitarRecuperacion.ejecutar).toHaveBeenCalledWith('a@b.com');
+  });
+
+  it('restablecer contraseña delega en el caso de uso', async () => {
+    const { controlador, restablecerContrasena } = crearControlador();
+
+    const respuesta = await controlador.postRestablecerContrasena({
+      token: 't',
+      contrasena: '12345678',
+    });
+
+    expect(respuesta).toEqual({ estado: 'ok' });
+    expect(restablecerContrasena.ejecutar).toHaveBeenCalledWith({
+      token: 't',
+      contrasena: '12345678',
+    });
   });
 });

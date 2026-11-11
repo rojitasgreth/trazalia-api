@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ActualizarUsuarioCasoUso } from './casos-uso/actualizar-usuario.caso-uso.js';
 import { AdminCerrarSesionCasoUso } from './casos-uso/admin-cerrar-sesion.caso-uso.js';
 import { CrearUsuarioCasoUso } from './casos-uso/crear-usuario.caso-uso.js';
+import { DesbloquearUsuarioCasoUso } from './casos-uso/desbloquear-usuario.caso-uso.js';
 import { InactivarUsuarioCasoUso } from './casos-uso/inactivar-usuario.caso-uso.js';
 import { ListarSesionesDeUsuarioCasoUso } from './casos-uso/listar-sesiones-de-usuario.caso-uso.js';
 import {
@@ -40,6 +41,7 @@ export class UsuariosController {
     private readonly reenviarInvitacion: ReenviarInvitacionCasoUso,
     private readonly listarSesionesDeUsuario: ListarSesionesDeUsuarioCasoUso,
     private readonly adminCerrarSesion: AdminCerrarSesionCasoUso,
+    private readonly desbloquearUsuario: DesbloquearUsuarioCasoUso,
   ) {}
 
   @Post()
@@ -115,6 +117,16 @@ export class UsuariosController {
     @Param('id', { schema: z.string().uuid() }) id: string,
   ): Promise<{ estado: 'ok' }> {
     await this.reenviarInvitacion.ejecutar(admin.idUsuario, id);
+    return { estado: 'ok' };
+  }
+
+  @Post(':id/desbloquear')
+  @UseGuards(CsrfGuard)
+  async postDesbloquear(
+    @UsuarioActual() admin: UsuarioAutenticado,
+    @Param('id', { schema: z.string().uuid() }) id: string,
+  ): Promise<{ estado: 'ok' }> {
+    await this.desbloquearUsuario.ejecutar(admin.idUsuario, id);
     return { estado: 'ok' };
   }
 

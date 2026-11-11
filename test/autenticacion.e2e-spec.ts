@@ -41,6 +41,8 @@ describe('Autenticación (e2e, PostgreSQL real)', () => {
     await prisma.registroTokenRenovacion.deleteMany();
     await prisma.sesionUsuario.deleteMany();
     await prisma.invitacionUsuario.deleteMany();
+    await prisma.recuperacionContrasena.deleteMany();
+    await prisma.intentoAcceso.deleteMany();
     await prisma.usuario.deleteMany();
   });
 
@@ -230,5 +232,69 @@ describe('Autenticación (e2e, PostgreSQL real)', () => {
       where: { idUsuario: usuario.idUsuario },
     });
     expect(actualizado.estado).toBe('SUSPENDIDO');
+  });
+
+  it('AC-025: bloquea una cuenta ACTIVO al cruzar el umbral de intentos fallidos', async () => {
+    const usuario = await crearUsuario('ACTIVO');
+
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador: usuario.correo, contrasena: 'mal' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador: usuario.correo, contrasena: 'mal' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador: usuario.correo, contrasena: 'mal' })
+      .expect(423);
+
+    // Incluso con la contraseña correcta, sigue bloqueada dentro del plazo.
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador: usuario.correo, contrasena: 'contraseña-válida' })
+      .expect(423);
+
+    const actualizado = await prisma.usuario.findUniqueOrThrow({
+      where: { idUsuario: usuario.idUsuario },
+    });
+    expect(actualizado.estado).toBe('BLOQUEADO');
+  }, 15000);
+
+  it('AC-035: un identificador sin cuenta recibe la misma respuesta de bloqueo al cruzar el umbral', async () => {
+    const identificador = `nadie-${randomUUID().slice(0, 8)}@example.com`;
+
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador, contrasena: 'x' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador, contrasena: 'x' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador, contrasena: 'x' })
+      .expect(423);
+  });
+
+  it('BR-035: se desbloquea automáticamente en el intento posterior al vencer el plazo', async () => {
+    const usuario = await crearUsuario('ACTIVO');
+    await prisma.usuario.update({
+      where: { idUsuario: usuario.idUsuario },
+      data: { estado: 'BLOQUEADO', bloqueadoHasta: new Date(Date.now() - 1000) },
+    });
+
+    await request(app.getHttpServer())
+      .post(`${RUTA}/iniciar-sesion`)
+      .send({ identificador: usuario.correo, contrasena: 'contraseña-válida' })
+      .expect(201);
+
+    const actualizado = await prisma.usuario.findUniqueOrThrow({
+      where: { idUsuario: usuario.idUsuario },
+    });
+    expect(actualizado.estado).toBe('ACTIVO');
+    expect(actualizado.bloqueadoHasta).toBeNull();
   });
 });

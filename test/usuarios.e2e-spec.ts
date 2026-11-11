@@ -40,6 +40,8 @@ describe('Administración de usuarios (e2e, PostgreSQL real)', () => {
     await prisma.registroTokenRenovacion.deleteMany();
     await prisma.sesionUsuario.deleteMany();
     await prisma.invitacionUsuario.deleteMany();
+    await prisma.recuperacionContrasena.deleteMany();
+    await prisma.intentoAcceso.deleteMany();
     await prisma.usuario.deleteMany();
   });
 
@@ -363,5 +365,37 @@ describe('Administración de usuarios (e2e, PostgreSQL real)', () => {
     const { agente } = await loginComo(admin.correo);
 
     await agente.post(`${RUTA}/${objetivo.idUsuario}/suspender`).expect(403);
+  });
+
+  it('un administrador puede desbloquear una cuenta BLOQUEADA antes de que venza el plazo', async () => {
+    const admin = await crearUsuario('ACTIVO', 'ADMINISTRADOR');
+    const objetivo = await crearUsuario('ACTIVO', 'FISIOTERAPEUTA');
+    await prisma.usuario.update({
+      where: { idUsuario: objetivo.idUsuario },
+      data: { estado: 'BLOQUEADO', bloqueadoHasta: new Date(Date.now() + 60_000) },
+    });
+    const { agente, csrf } = await loginComo(admin.correo);
+
+    await agente
+      .post(`${RUTA}/${objetivo.idUsuario}/desbloquear`)
+      .set('X-XSRF-TOKEN', csrf)
+      .expect(201);
+
+    const actualizado = await prisma.usuario.findUniqueOrThrow({
+      where: { idUsuario: objetivo.idUsuario },
+    });
+    expect(actualizado.estado).toBe('ACTIVO');
+    expect(actualizado.bloqueadoHasta).toBeNull();
+  });
+
+  it('rechaza desbloquear una cuenta que no está bloqueada', async () => {
+    const admin = await crearUsuario('ACTIVO', 'ADMINISTRADOR');
+    const objetivo = await crearUsuario('ACTIVO', 'FISIOTERAPEUTA');
+    const { agente, csrf } = await loginComo(admin.correo);
+
+    await agente
+      .post(`${RUTA}/${objetivo.idUsuario}/desbloquear`)
+      .set('X-XSRF-TOKEN', csrf)
+      .expect(400);
   });
 });

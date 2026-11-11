@@ -22,6 +22,15 @@ const esquemaEntorno = z.object({
   SMTP_USUARIO: z.string().optional(),
   SMTP_CONTRASENA: z.string().optional(),
   CORREO_REMITENTE: z.string().default('Trazalia <no-responder@trazalia.local>'),
+
+  // Bloqueo por fuerza bruta (BR-035, DP-05: "ejemplo inicial... calibrar").
+  BLOQUEO_UMBRAL_INTENTOS: z.coerce.number().int().positive().default(10),
+  BLOQUEO_VENTANA_MINUTOS: z.coerce.number().int().positive().default(15),
+  BLOQUEO_DURACION_MINUTOS: z.coerce.number().int().positive().default(15),
+
+  // Rate limiting por IP (BR-035) en rutas públicas sensibles.
+  RATE_LIMIT_VENTANA_SEGUNDOS: z.coerce.number().int().positive().default(60),
+  RATE_LIMIT_MAXIMO: z.coerce.number().int().positive().default(20),
 });
 
 export type Entorno = z.infer<typeof esquemaEntorno>;
