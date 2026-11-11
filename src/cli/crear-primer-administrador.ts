@@ -1,10 +1,19 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from '../app.module.js';
 import { AuditoriaServicio } from '../modulos/auditoria/auditoria.servicio.js';
+import { CorreoServicio } from '../compartido/correo/correo.servicio.js';
 import { InvitacionRepositorio } from '../modulos/acceso/repositorios/invitacion.repositorio.js';
 import { UsuarioRepositorio } from '../modulos/acceso/repositorios/usuario.repositorio.js';
+import { generarNombreUsuario } from '../modulos/acceso/dominio/nombre-usuario.js';
+import {
+  construirEnlaceActivacion,
+  formatearFechaVencimiento,
+  perfilLegible,
+} from '../modulos/acceso/dominio/invitacion-correo.js';
 import { generarTokenAleatorio, resumir } from '../compartido/seguridad/resumen.js';
 import type { Nacionalidad } from '../generado/prisma/enums.js';
+import type { Entorno } from '../configuracion/entorno.js';
 
 // BR-037: crea el primer administrador (estado PENDIENTE) y emite su
 // invitación estándar (DP-03: 24h), auditado con actor "sistema".
@@ -68,8 +77,10 @@ async function principal(): Promise<void> {
     const usuarios = app.get(UsuarioRepositorio);
     const invitaciones = app.get(InvitacionRepositorio);
     const auditoria = app.get(AuditoriaServicio);
+    const correo = app.get(CorreoServicio);
+    const config = app.get<ConfigService<Entorno, true>>(ConfigService);
 
-    const nombreUsuario = `${argumentos.nacionalidad}${argumentos.cedula}`;
+    const nombreUsuario = generarNombreUsuario(argumentos.nacionalidad, argumentos.cedula);
     const usuario = await usuarios.crear({
       nacionalidad: argumentos.nacionalidad,
       cedula: argumentos.cedula,
@@ -82,11 +93,8 @@ async function principal(): Promise<void> {
     });
 
     const token = generarTokenAleatorio();
-    await invitaciones.crear(
-      usuario.idUsuario,
-      resumir(token),
-      new Date(Date.now() + VIDA_INVITACION_MS),
-    );
+    const fechaExpiracion = new Date(Date.now() + VIDA_INVITACION_MS);
+    await invitaciones.crear(usuario.idUsuario, resumir(token), fechaExpiracion);
 
     await auditoria.registrar({
       idUsuarioAfectado: usuario.idUsuario,
@@ -95,11 +103,24 @@ async function principal(): Promise<void> {
       metadatosMinimos: { actor: 'sistema', nombreUsuario },
     });
 
-    console.log('Primer administrador creado.');
+    await correo.enviarInvitacion({
+      para: usuario.correo,
+      nombre: usuario.nombre,
+      nombreAdmin: 'el sistema',
+      perfil: perfilLegible(usuario.rol),
+      usuario: nombreUsuario,
+      correo: usuario.correo,
+      enlaceActivacion: construirEnlaceActivacion(config.get('ORIGEN_WEB', { infer: true }), token),
+      fechaVencimiento: formatearFechaVencimiento(
+        fechaExpiracion,
+        config.get('ZONA_HORARIA_NEGOCIO', { infer: true }),
+      ),
+    });
+
+    console.log('Primer administrador creado. Se envió la invitación por correo.');
     console.log(`  nombre_usuario: ${nombreUsuario}`);
-    console.log(`  token de invitación (válido 24h, un solo uso): ${token}`);
     console.log(
-      '  Nota: el envío de correo real se incorpora en el Corte 3; por ahora, entrega este token de forma segura.',
+      `  token de invitación (válido 24h, un solo uso, por si el correo no llega): ${token}`,
     );
   } finally {
     await app.close();
