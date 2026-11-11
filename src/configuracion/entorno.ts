@@ -4,6 +4,10 @@ const esquemaEntorno = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PUERTO: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  // Rol propietario de los esquemas (trazalia_migrador). La API nunca la usa
+  // en tiempo de ejecución; solo el worker, para el archivo semestral de
+  // auditoría (BR-038): auditoria_historico es inaccesible para trazalia_app.
+  DATABASE_URL_MIGRACIONES: z.url({ protocol: /^postgres(ql)?$/ }),
   // Origen público del frontend: se usa para CORS y para validar Origin (DP-08).
   ORIGEN_WEB: z.url(),
   ZONA_HORARIA_NEGOCIO: z.string().default('America/Caracas'),
