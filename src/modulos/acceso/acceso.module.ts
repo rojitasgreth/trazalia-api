@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CorreoModule } from '../../compartido/correo/correo.module.js';
+import { AuditoriaController } from '../auditoria/auditoria.controller.js';
 import { AuditoriaModule } from '../auditoria/auditoria.module.js';
 import { AutenticacionController } from './autenticacion.controller.js';
 import { UsuariosController } from './usuarios.controller.js';
@@ -38,7 +39,7 @@ import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
 
 @Module({
   imports: [AuditoriaModule, CorreoModule],
-  controllers: [AutenticacionController, UsuariosController],
+  controllers: [AutenticacionController, UsuariosController, AuditoriaController],
   providers: [
     JwtServicio,
     CookiesServicio,
@@ -73,6 +74,6 @@ import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
     SolicitarRecuperacionCasoUso,
     RestablecerContrasenaCasoUso,
   ],
-  exports: [AutenticacionGuard],
+  exports: [AutenticacionGuard, RolesGuard],
 })
 export class AccesoModule {}
