@@ -117,11 +117,21 @@ describe('Auditoría (e2e, PostgreSQL real)', () => {
       .query({ idUsuario: admin.idUsuario, pagina: 1, porPagina: 50 })
       .expect(200);
 
+    type Fila = {
+      idUsuarioActor: string | null;
+      idUsuarioAfectado: string | null;
+      nombreActor: string | null;
+    };
     expect(
       respuesta.body.datos.every(
-        (e: { idUsuarioActor: string | null; idUsuarioAfectado: string | null }) =>
+        (e: Fila) =>
           e.idUsuarioActor === admin.idUsuario || e.idUsuarioAfectado === admin.idUsuario,
       ),
+    ).toBe(true);
+    expect(
+      respuesta.body.datos.some((e: Fila) => e.idUsuarioActor === admin.idUsuario) &&
+        respuesta.body.datos.find((e: Fila) => e.idUsuarioActor === admin.idUsuario).nombreActor ===
+          'Ana Pérez',
     ).toBe(true);
   });
 });
