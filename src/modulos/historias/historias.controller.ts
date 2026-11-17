@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -19,6 +20,9 @@ import { Roles } from '../acceso/guardias/roles.decorator.js';
 import { RolesGuard } from '../acceso/guardias/roles.guard.js';
 import { UsuarioActual } from '../acceso/guardias/usuario-actual.decorator.js';
 import { ActualizarHistoriaCasoUso } from './casos-uso/actualizar-historia.caso-uso.js';
+import { ArchivarHistoriaCasoUso } from './casos-uso/archivar-historia.caso-uso.js';
+import { DesarchivarHistoriaCasoUso } from './casos-uso/desarchivar-historia.caso-uso.js';
+import { EliminarHistoriaCasoUso } from './casos-uso/eliminar-historia.caso-uso.js';
 import {
   BuscarCoincidenciasCasoUso,
   type ResultadoCoincidencia,
@@ -47,6 +51,9 @@ export class HistoriasController {
     private readonly obtenerHistoria: ObtenerHistoriaCasoUso,
     private readonly buscarCoincidencias: BuscarCoincidenciasCasoUso,
     private readonly actualizarHistoria: ActualizarHistoriaCasoUso,
+    private readonly eliminarHistoria: EliminarHistoriaCasoUso,
+    private readonly archivarHistoria: ArchivarHistoriaCasoUso,
+    private readonly desarchivarHistoria: DesarchivarHistoriaCasoUso,
   ) {}
 
   @Get()
@@ -99,6 +106,41 @@ export class HistoriasController {
     @Body({ schema: esquemaActualizarHistoria }) cuerpo: z.infer<typeof esquemaActualizarHistoria>,
   ): Promise<{ historia: HistoriaDetalle }> {
     const historia = await this.actualizarHistoria.ejecutar(fisio.idUsuario, id, cuerpo);
+    return { historia };
+  }
+
+  // B25/B26 / RF-019–RF-021: borrado definitivo si no hay registros clínicos.
+  @Delete(':id')
+  @UseGuards(CsrfGuard)
+  @HttpCode(204)
+  async deleteEliminar(
+    @UsuarioActual() fisio: UsuarioAutenticado,
+    @Param('id', { schema: z.string().uuid() }) id: string,
+  ): Promise<void> {
+    await this.eliminarHistoria.ejecutar(fisio.idUsuario, id);
+  }
+
+  // B27 / AC-014: archivar una historia con registros clínicos.
+  @Post(':id/archivar')
+  @UseGuards(CsrfGuard)
+  @HttpCode(200)
+  async postArchivar(
+    @UsuarioActual() fisio: UsuarioAutenticado,
+    @Param('id', { schema: z.string().uuid() }) id: string,
+  ): Promise<{ historia: HistoriaDetalle }> {
+    const historia = await this.archivarHistoria.ejecutar(fisio.idUsuario, id);
+    return { historia };
+  }
+
+  // B24 / AC-014: desarchivar.
+  @Post(':id/desarchivar')
+  @UseGuards(CsrfGuard)
+  @HttpCode(200)
+  async postDesarchivar(
+    @UsuarioActual() fisio: UsuarioAutenticado,
+    @Param('id', { schema: z.string().uuid() }) id: string,
+  ): Promise<{ historia: HistoriaDetalle }> {
+    const historia = await this.desarchivarHistoria.ejecutar(fisio.idUsuario, id);
     return { historia };
   }
 }

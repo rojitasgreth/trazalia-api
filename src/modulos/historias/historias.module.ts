@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { AccesoModule } from '../acceso/acceso.module.js';
 import { AuditoriaModule } from '../auditoria/auditoria.module.js';
 import { ActualizarHistoriaCasoUso } from './casos-uso/actualizar-historia.caso-uso.js';
+import { ArchivarHistoriaCasoUso } from './casos-uso/archivar-historia.caso-uso.js';
+import { DesarchivarHistoriaCasoUso } from './casos-uso/desarchivar-historia.caso-uso.js';
+import { EliminarHistoriaCasoUso } from './casos-uso/eliminar-historia.caso-uso.js';
+import { MarcarHistoriaActivaCasoUso } from './casos-uso/marcar-historia-activa.caso-uso.js';
 import { BuscarCoincidenciasCasoUso } from './casos-uso/buscar-coincidencias.caso-uso.js';
 import { CrearHistoriaCasoUso } from './casos-uso/crear-historia.caso-uso.js';
 import { ListarHistoriasCasoUso } from './casos-uso/listar-historias.caso-uso.js';
@@ -18,11 +22,17 @@ import { HistoriaRepositorio } from './repositorios/historia.repositorio.js';
   providers: [
     HistoriaRepositorio,
     ActualizarHistoriaCasoUso,
+    ArchivarHistoriaCasoUso,
     BuscarCoincidenciasCasoUso,
+    DesarchivarHistoriaCasoUso,
+    EliminarHistoriaCasoUso,
+    MarcarHistoriaActivaCasoUso,
     CrearHistoriaCasoUso,
     ListarHistoriasCasoUso,
     ObtenerHistoriaCasoUso,
     { provide: REGISTROS_CLINICOS, useClass: SinRegistrosClinicos },
   ],
+  // Interfaz pública para el futuro módulo de valoraciones (RF-017).
+  exports: [MarcarHistoriaActivaCasoUso],
 })
 export class HistoriasModule {}

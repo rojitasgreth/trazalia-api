@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { REGISTROS_CLINICOS, type RegistrosClinicos } from '../puertos/registros-clinicos.js';
 import { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
 import { aHistoriaDetalle, type HistoriaDetalle } from '../vista/historia-vista.js';
 
@@ -6,18 +7,24 @@ import { aHistoriaDetalle, type HistoriaDetalle } from '../vista/historia-vista.
 // inexistente (404), para no revelar que existe.
 @Injectable()
 export class ObtenerHistoriaCasoUso {
-  constructor(private readonly historias: HistoriaRepositorio) {}
+  constructor(
+    private readonly historias: HistoriaRepositorio,
+    @Inject(REGISTROS_CLINICOS) private readonly registros: RegistrosClinicos,
+  ) {}
 
   async ejecutar(idFisioterapeuta: string, idHistoria: string): Promise<HistoriaDetalle> {
     const historia = await this.historias.buscarPorId(idFisioterapeuta, idHistoria);
     if (!historia) {
       throw new NotFoundException();
     }
-    const otras = await this.historias.listarOtrasDelPaciente(
-      idFisioterapeuta,
-      historia.idPaciente,
-      historia.idHistoria,
-    );
-    return aHistoriaDetalle(historia, otras);
+    const [otras, tieneRegistros] = await Promise.all([
+      this.historias.listarOtrasDelPaciente(
+        idFisioterapeuta,
+        historia.idPaciente,
+        historia.idHistoria,
+      ),
+      this.registros.tieneRegistros(idFisioterapeuta, idHistoria),
+    ]);
+    return aHistoriaDetalle(historia, otras, tieneRegistros);
   }
 }

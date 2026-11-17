@@ -9,8 +9,12 @@ function crearRepositorio() {
     count: vi.fn().mockResolvedValue(0),
     create: vi.fn().mockResolvedValue({ idHistoria: 'h1' }),
     update: vi.fn().mockResolvedValue({ idHistoria: 'h1' }),
+    delete: vi.fn().mockResolvedValue(undefined),
   };
-  const paciente = { create: vi.fn().mockResolvedValue({ idPaciente: 'p-nuevo' }) };
+  const paciente = {
+    create: vi.fn().mockResolvedValue({ idPaciente: 'p-nuevo' }),
+    delete: vi.fn().mockResolvedValue(undefined),
+  };
   const representanteHistoria = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
   const tx = { historiaClinica, paciente, representanteHistoria };
   const prisma = {
@@ -161,6 +165,56 @@ describe('HistoriaRepositorio', () => {
 
     expect(historiaClinica.update.mock.calls[0]![0].data.representante).toEqual({
       create: expect.objectContaining({ parentesco: 'PADRE', nombre: 'José' }),
+    });
+  });
+
+  it('§13.3: elimina la historia, el paciente sin historias y audita en la transacción', async () => {
+    const { repositorio, historiaClinica, paciente } = crearRepositorio();
+    const auditar = vi.fn().mockResolvedValue(undefined);
+    historiaClinica.count.mockResolvedValue(0);
+
+    await repositorio.eliminar('f1', { idHistoria: 'h1', idPaciente: 'p1' }, auditar);
+
+    expect(historiaClinica.delete).toHaveBeenCalledWith({
+      where: { idHistoria: 'h1', idFisioterapeuta: 'f1' },
+    });
+    expect(paciente.delete).toHaveBeenCalledWith({ where: { idPaciente: 'p1' } });
+    expect(auditar).toHaveBeenCalledWith(expect.objectContaining({ historiaClinica }));
+  });
+
+  it('conserva el paciente si le quedan otras historias', async () => {
+    const { repositorio, historiaClinica, paciente } = crearRepositorio();
+    historiaClinica.count.mockResolvedValue(1);
+
+    await repositorio.eliminar('f1', { idHistoria: 'h1', idPaciente: 'p1' }, vi.fn());
+
+    expect(paciente.delete).not.toHaveBeenCalled();
+  });
+
+  it('archiva y desarchiva con fecha de archivo', async () => {
+    const { repositorio, historiaClinica } = crearRepositorio();
+
+    await repositorio.cambiarArchivo('f1', 'h1', true);
+    await repositorio.cambiarArchivo('f1', 'h1', false);
+
+    expect(historiaClinica.update.mock.calls[0]![0]).toMatchObject({
+      where: { idHistoria: 'h1', idFisioterapeuta: 'f1' },
+      data: { archivada: true, fechaArchivo: expect.any(Date) },
+    });
+    expect(historiaClinica.update.mock.calls[1]![0].data).toEqual({
+      archivada: false,
+      fechaArchivo: null,
+    });
+  });
+
+  it('marca Activa solo una historia en Borrador y no archivada', async () => {
+    const { repositorio, historiaClinica } = crearRepositorio();
+
+    await repositorio.marcarActiva('f1', 'h1');
+
+    expect(historiaClinica.update).toHaveBeenCalledWith({
+      where: { idHistoria: 'h1', idFisioterapeuta: 'f1', estado: 'BORRADOR', archivada: false },
+      data: { estado: 'ACTIVA' },
     });
   });
 

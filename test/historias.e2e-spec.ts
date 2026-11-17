@@ -410,6 +410,48 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     expect(intacta.nombre).toBe('Carlos');
   });
 
+  it('AC-015/RF-021: sin registros clínicos se elimina y solo queda la auditoría mínima', async () => {
+    const { usuario, agente, crear, csrf } = await loginComo();
+    const trauma = (await crear(CARLOS).expect(201)).body.historia;
+    const neuro = (await crear({ ...CARLOS, tipo: 'NEURO_ADULTO' }).expect(201)).body.historia;
+    const eliminar = (id: string) => agente.delete(`${RUTA}/${id}`).set('X-XSRF-TOKEN', csrf);
+
+    // En esta fase no hay registros: archivar no aplica (se puede eliminar).
+    await agente
+      .post(`${RUTA}/${trauma.idHistoria}/archivar`)
+      .set('X-XSRF-TOKEN', csrf)
+      .expect(409);
+
+    await eliminar(trauma.idHistoria).expect(204);
+    await agente.get(`${RUTA}/${trauma.idHistoria}`).expect(404);
+    // El paciente sigue: le queda la historia de Neurología.
+    const pacientes = await prisma.paciente.count({
+      where: { idFisioterapeuta: usuario.idUsuario },
+    });
+    expect(pacientes).toBe(1);
+
+    await eliminar(neuro.idHistoria).expect(204);
+    expect(await prisma.paciente.count({ where: { idFisioterapeuta: usuario.idUsuario } })).toBe(0);
+
+    const eventos = await prisma.eventoAuditoria.findMany({
+      where: { tipoEvento: 'eliminacion_historia', idUsuarioActor: usuario.idUsuario },
+    });
+    expect(eventos.map((e) => e.metadatosMinimos)).toEqual(
+      expect.arrayContaining([{ idHistoria: trauma.idHistoria }, { idHistoria: neuro.idHistoria }]),
+    );
+    // Sin copia de los datos eliminados (§13.3).
+    expect(JSON.stringify(eventos)).not.toContain('15482301');
+  });
+
+  it('AC-013: no se puede eliminar la historia de otro fisioterapeuta', async () => {
+    const a = await loginComo();
+    const b = await loginComo();
+    const deA = (await a.crear(CARLOS).expect(201)).body.historia;
+
+    await b.agente.delete(`${RUTA}/${deA.idHistoria}`).set('X-XSRF-TOKEN', b.csrf).expect(404);
+    expect(await prisma.historiaClinica.count({ where: { idHistoria: deA.idHistoria } })).toBe(1);
+  });
+
   it('AC-013/§18: aislamiento entre dos fisioterapeutas con documentos idénticos', async () => {
     const a = await loginComo();
     const b = await loginComo();

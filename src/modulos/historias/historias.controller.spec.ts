@@ -1,5 +1,8 @@
 import type { UsuarioAutenticado } from '../acceso/guardias/autenticacion.guard.js';
 import type { ActualizarHistoriaCasoUso } from './casos-uso/actualizar-historia.caso-uso.js';
+import type { ArchivarHistoriaCasoUso } from './casos-uso/archivar-historia.caso-uso.js';
+import type { DesarchivarHistoriaCasoUso } from './casos-uso/desarchivar-historia.caso-uso.js';
+import type { EliminarHistoriaCasoUso } from './casos-uso/eliminar-historia.caso-uso.js';
 import type { BuscarCoincidenciasCasoUso } from './casos-uso/buscar-coincidencias.caso-uso.js';
 import type { CrearHistoriaCasoUso } from './casos-uso/crear-historia.caso-uso.js';
 import type { ListarHistoriasCasoUso } from './casos-uso/listar-historias.caso-uso.js';
@@ -15,14 +18,32 @@ function crearControlador() {
   const obtener = { ejecutar: vi.fn().mockResolvedValue({ idHistoria: 'h1' }) };
   const coincidencias = { ejecutar: vi.fn().mockResolvedValue({ resultado: 'ninguna' }) };
   const actualizar = { ejecutar: vi.fn().mockResolvedValue({ idHistoria: 'h1' }) };
+  const eliminar = { ejecutar: vi.fn().mockResolvedValue(undefined) };
+  const archivar = { ejecutar: vi.fn().mockResolvedValue({ idHistoria: 'h1', archivada: true }) };
+  const desarchivar = {
+    ejecutar: vi.fn().mockResolvedValue({ idHistoria: 'h1', archivada: false }),
+  };
   const controlador = new HistoriasController(
     crear as unknown as CrearHistoriaCasoUso,
     listar as unknown as ListarHistoriasCasoUso,
     obtener as unknown as ObtenerHistoriaCasoUso,
     coincidencias as unknown as BuscarCoincidenciasCasoUso,
     actualizar as unknown as ActualizarHistoriaCasoUso,
+    eliminar as unknown as EliminarHistoriaCasoUso,
+    archivar as unknown as ArchivarHistoriaCasoUso,
+    desarchivar as unknown as DesarchivarHistoriaCasoUso,
   );
-  return { controlador, crear, listar, obtener, coincidencias, actualizar };
+  return {
+    controlador,
+    crear,
+    listar,
+    obtener,
+    coincidencias,
+    actualizar,
+    eliminar,
+    archivar,
+    desarchivar,
+  };
 }
 
 describe('HistoriasController', () => {
@@ -62,6 +83,22 @@ describe('HistoriasController', () => {
       historia: { idHistoria: 'h1' },
     });
     expect(actualizar.ejecutar).toHaveBeenCalledWith('f1', 'h1', cuerpo);
+  });
+
+  it('elimina, archiva y desarchiva con el propietario de la sesión', async () => {
+    const { controlador, eliminar, archivar, desarchivar } = crearControlador();
+
+    await controlador.deleteEliminar(FISIO, 'h1');
+    await expect(controlador.postArchivar(FISIO, 'h1')).resolves.toEqual({
+      historia: { idHistoria: 'h1', archivada: true },
+    });
+    await expect(controlador.postDesarchivar(FISIO, 'h1')).resolves.toEqual({
+      historia: { idHistoria: 'h1', archivada: false },
+    });
+
+    expect(eliminar.ejecutar).toHaveBeenCalledWith('f1', 'h1');
+    expect(archivar.ejecutar).toHaveBeenCalledWith('f1', 'h1');
+    expect(desarchivar.ejecutar).toHaveBeenCalledWith('f1', 'h1');
   });
 });
 

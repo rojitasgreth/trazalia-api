@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import type { DatosPersonales } from '../dominio/datos-personales.js';
 import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
 import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
 import { camposCambiados, cambiosParaOtraHistoria } from '../dominio/propagacion.js';
+import { REGISTROS_CLINICOS, type RegistrosClinicos } from '../puertos/registros-clinicos.js';
 import type { ActualizarHistoriaDto } from '../dto/actualizar-historia.dto.js';
 import {
   HistoriaRepositorio,
@@ -31,6 +33,7 @@ export class ActualizarHistoriaCasoUso {
     private readonly historias: HistoriaRepositorio,
     private readonly coincidencias: BuscarCoincidenciasCasoUso,
     private readonly auditoria: AuditoriaServicio,
+    @Inject(REGISTROS_CLINICOS) private readonly registros: RegistrosClinicos,
   ) {}
 
   async ejecutar(
@@ -96,12 +99,15 @@ export class ActualizarHistoriaCasoUso {
       },
     });
 
-    const otras = await this.historias.listarOtrasDelPaciente(
-      idFisioterapeuta,
-      historia.idPaciente,
-      historia.idHistoria,
-    );
-    return aHistoriaDetalle(historia, otras);
+    const [otras, tieneRegistros] = await Promise.all([
+      this.historias.listarOtrasDelPaciente(
+        idFisioterapeuta,
+        historia.idPaciente,
+        historia.idHistoria,
+      ),
+      this.registros.tieneRegistros(idFisioterapeuta, idHistoria),
+    ]);
+    return aHistoriaDetalle(historia, otras, tieneRegistros);
   }
 
   /**
