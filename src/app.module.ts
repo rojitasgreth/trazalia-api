@@ -5,6 +5,7 @@ import { validarEntorno, type Entorno } from './configuracion/entorno.js';
 import { PrismaModule } from './compartido/prisma/prisma.module.js';
 import { AccesoModule } from './modulos/acceso/acceso.module.js';
 import { AuditoriaModule } from './modulos/auditoria/auditoria.module.js';
+import { HistoriasModule } from './modulos/historias/historias.module.js';
 import { SaludModule } from './modulos/salud/salud.module.js';
 
 @Module({
@@ -27,6 +28,7 @@ import { SaludModule } from './modulos/salud/salud.module.js';
     SaludModule,
     AuditoriaModule,
     AccesoModule,
+    HistoriasModule,
   ],
 })
 export class AppModule {}
