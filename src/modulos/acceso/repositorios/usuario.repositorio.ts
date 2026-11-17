@@ -48,6 +48,16 @@ export class UsuarioRepositorio {
     return this.prisma.usuario.findUnique({ where: { idUsuario } });
   }
 
+  /** Para enriquecer la auditoría (AC-027) con el nombre actual, sin guardarlo en el evento. */
+  async buscarNombresPorIds(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const usuarios = await this.prisma.usuario.findMany({
+      where: { idUsuario: { in: ids } },
+      select: { idUsuario: true, nombre: true, apellido: true },
+    });
+    return new Map(usuarios.map((u) => [u.idUsuario, `${u.nombre} ${u.apellido}`]));
+  }
+
   /** BR-010: el login acepta correo o nombre de usuario; el correo se normaliza (minúsculas). */
   async buscarPorIdentificador(identificador: string): Promise<Usuario | null> {
     const normalizado = identificador.trim().toLowerCase();

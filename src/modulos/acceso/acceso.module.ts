@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CorreoModule } from '../../compartido/correo/correo.module.js';
 import { AuditoriaController } from '../auditoria/auditoria.controller.js';
 import { AuditoriaModule } from '../auditoria/auditoria.module.js';
+import { ListarAuditoriaCasoUso } from '../auditoria/casos-uso/listar-auditoria.caso-uso.js';
 import { AutenticacionController } from './autenticacion.controller.js';
 import { UsuariosController } from './usuarios.controller.js';
 import { AceptarInvitacionCasoUso } from './casos-uso/aceptar-invitacion.caso-uso.js';
@@ -73,6 +74,7 @@ import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
     DesbloquearUsuarioCasoUso,
     SolicitarRecuperacionCasoUso,
     RestablecerContrasenaCasoUso,
+    ListarAuditoriaCasoUso,
   ],
   exports: [AutenticacionGuard, RolesGuard],
 })
