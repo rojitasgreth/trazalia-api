@@ -6,7 +6,7 @@ import type {
   NacionalidadPaciente,
   TipoHistoria,
 } from '../../../generado/prisma/enums.js';
-import type { DatosPersonales } from '../dominio/datos-personales.js';
+import type { DatosPersonales, DatosRepresentante } from '../dominio/datos-personales.js';
 
 const INCLUIR = { representante: true } as const;
 
@@ -43,6 +43,10 @@ export function deFechaBd(fecha: Date | null): string | null {
 
 function aColumnas(datos: DatosPersonales) {
   return { ...datos, fechaNacimiento: aFechaBd(datos.fechaNacimiento) };
+}
+
+export function aColumnasRepresentante(representante: DatosRepresentante) {
+  return { ...representante, fechaNacimiento: aFechaBd(representante.fechaNacimiento) };
 }
 
 // Todas las consultas reciben el id del fisioterapeuta autenticado y filtran
@@ -92,12 +96,21 @@ export class HistoriaRepositorio {
     idPaciente: string | null,
     tipo: TipoHistoria,
     datos: DatosPersonales,
+    representante: DatosRepresentante | null = null,
   ): Promise<HistoriaConRepresentante> {
     return this.prisma.$transaction(async (tx) => {
       const paciente =
         idPaciente ?? (await tx.paciente.create({ data: { idFisioterapeuta } })).idPaciente;
       return tx.historiaClinica.create({
-        data: { ...aColumnas(datos), tipo, idPaciente: paciente, idFisioterapeuta },
+        data: {
+          ...aColumnas(datos),
+          tipo,
+          idPaciente: paciente,
+          idFisioterapeuta,
+          ...(representante
+            ? { representante: { create: aColumnasRepresentante(representante) } }
+            : {}),
+        },
         include: INCLUIR,
       });
     });

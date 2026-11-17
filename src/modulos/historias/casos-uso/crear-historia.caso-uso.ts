@@ -3,9 +3,10 @@ import { esConflictoDeUnicidad } from '../../../compartido/prisma/errores.js';
 import type { TipoHistoria } from '../../../generado/prisma/enums.js';
 import { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
 import type { DatosPersonales } from '../dominio/datos-personales.js';
-import { validarIdentificacion } from '../dominio/identificacion.js';
-import { normalizarDatosPersonales } from '../dominio/normalizar.js';
+import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
+import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
 import type { DatosPersonalesDto } from '../dto/datos-personales.dto.js';
+import type { RepresentanteDto } from '../dto/representante.dto.js';
 import {
   HistoriaRepositorio,
   type HistoriaConRepresentante,
@@ -14,6 +15,7 @@ import { aHistoriaDetalle, type HistoriaDetalle } from '../vista/historia-vista.
 
 export interface CrearHistoriaComando extends DatosPersonalesDto {
   tipo: TipoHistoria;
+  representante?: RepresentanteDto | null;
 }
 
 // Flujo §6 pasos 3–9 / RF-002, RF-006, RF-008–RF-011, RF-025.
@@ -30,8 +32,10 @@ export class CrearHistoriaCasoUso {
   ): Promise<HistoriaDetalle> {
     const { tipo } = comando;
     const datos = normalizarDatosPersonales(tipo, comando);
+    // RF-027/AC-011: la historia infantil puede crearse sin representante.
+    const representante = normalizarRepresentante(tipo, comando.representante);
 
-    const errores = validarIdentificacion(tipo, datos);
+    const errores = [...validarIdentificacion(tipo, datos), ...validarRepresentante(representante)];
     if (errores.length > 0) {
       throw new BadRequestException({ mensaje: 'Faltan datos para crear la historia.', errores });
     }
@@ -45,7 +49,13 @@ export class CrearHistoriaCasoUso {
 
     let historia: HistoriaConRepresentante;
     try {
-      historia = await this.historias.crear(idFisioterapeuta, idPaciente, tipo, datos);
+      historia = await this.historias.crear(
+        idFisioterapeuta,
+        idPaciente,
+        tipo,
+        datos,
+        representante,
+      );
     } catch (error) {
       // Otra solicitud creó la misma historia entre la búsqueda y el INSERT:
       // el índice único parcial lo impide (§18, concurrencia).

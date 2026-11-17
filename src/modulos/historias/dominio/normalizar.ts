@@ -1,7 +1,13 @@
 import type { TipoHistoria } from '../../../generado/prisma/enums.js';
 import type { DatosPersonalesDto } from '../dto/datos-personales.dto.js';
+import type { RepresentanteDto } from '../dto/representante.dto.js';
 import { CAMPOS_PERSONALES, campoAplica, esTipoAdulto } from './campos-por-tipo.js';
-import { normalizarCedula, textoONulo, type DatosPersonales } from './datos-personales.js';
+import {
+  normalizarCedula,
+  textoONulo,
+  type DatosPersonales,
+  type DatosRepresentante,
+} from './datos-personales.js';
 
 /**
  * Lleva la entrada del formulario a la forma persistida para el tipo indicado:
@@ -49,4 +55,26 @@ export function normalizarDatosPersonales(
     }
   }
   return datos;
+}
+
+/**
+ * SPEC §8.4: el representante solo existe en Rehabilitación infantil. Un
+ * representante sin ningún dato equivale a no tenerlo (null).
+ */
+export function normalizarRepresentante(
+  tipo: TipoHistoria,
+  entrada: RepresentanteDto | null | undefined,
+): DatosRepresentante | null {
+  if (tipo !== 'REHAB_INFANTIL' || !entrada) return null;
+  const representante: DatosRepresentante = {
+    parentesco: entrada.parentesco ?? null,
+    nombre: textoONulo(entrada.nombre),
+    apellido: textoONulo(entrada.apellido),
+    cedula: normalizarCedula(entrada.cedula),
+    fechaNacimiento: entrada.fechaNacimiento ?? null,
+    estadoCivil: entrada.estadoCivil ?? null,
+    gradoInstruccion: entrada.gradoInstruccion ?? null,
+    ocupacion: textoONulo(entrada.ocupacion),
+  };
+  return Object.values(representante).some((valor) => valor !== null) ? representante : null;
 }

@@ -1,4 +1,4 @@
-import { validarIdentificacion } from './identificacion.js';
+import { validarIdentificacion, validarRepresentante } from './identificacion.js';
 
 const BASE = {
   nombre: 'Carlos',
@@ -68,5 +68,37 @@ describe('validarIdentificacion (SPEC §7.1, §9.2)', () => {
   it('rechaza una cédula que no sea de 1 a 9 dígitos', () => {
     const errores = validarIdentificacion('NEURO_ADULTO', { ...BASE, cedula: '1234567890' });
     expect(errores[0]?.mensaje).toBe('La cédula debe contener solo dígitos, máximo 9.');
+  });
+});
+
+describe('validarRepresentante', () => {
+  it('acepta la ausencia de representante y una cédula válida', () => {
+    expect(validarRepresentante(null)).toEqual([]);
+    expect(
+      validarRepresentante({
+        parentesco: 'MADRE',
+        nombre: 'Laura',
+        apellido: null,
+        cedula: '18220417',
+        fechaNacimiento: null,
+        estadoCivil: null,
+        gradoInstruccion: null,
+        ocupacion: null,
+      }),
+    ).toEqual([]);
+  });
+
+  it('rechaza una cédula de más de 9 dígitos', () => {
+    const errores = validarRepresentante({
+      parentesco: null,
+      nombre: null,
+      apellido: null,
+      cedula: '1234567890',
+      fechaNacimiento: null,
+      estadoCivil: null,
+      gradoInstruccion: null,
+      ocupacion: null,
+    });
+    expect(errores[0]?.campo).toBe('representante.cedula');
   });
 });

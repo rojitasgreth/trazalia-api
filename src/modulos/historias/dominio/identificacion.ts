@@ -1,9 +1,9 @@
 import type { TipoHistoria } from '../../../generado/prisma/enums.js';
 import { esTipoAdulto } from './campos-por-tipo.js';
-import type { DatosPersonales } from './datos-personales.js';
+import type { DatosPersonales, DatosRepresentante } from './datos-personales.js';
 
 export interface ErrorIdentificacion {
-  campo: 'nombre' | 'apellido' | 'documento' | 'fechaNacimiento';
+  campo: 'nombre' | 'apellido' | 'documento' | 'fechaNacimiento' | 'representante.cedula';
   mensaje: string;
 }
 
@@ -68,4 +68,19 @@ export function validarIdentificacion(
   }
 
   return errores;
+}
+
+/** SPEC §8.4: la cédula del representante, si se escribe, sigue el mismo formato. */
+export function validarRepresentante(
+  representante: DatosRepresentante | null,
+): ErrorIdentificacion[] {
+  if (representante?.cedula && !/^\d{1,9}$/.test(representante.cedula)) {
+    return [
+      {
+        campo: 'representante.cedula',
+        mensaje: 'La cédula del representante debe contener solo dígitos, máximo 9.',
+      },
+    ];
+  }
+  return [];
 }

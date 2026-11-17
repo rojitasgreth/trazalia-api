@@ -74,6 +74,28 @@ describe('HistoriaRepositorio', () => {
     );
   });
 
+  it('crea el representante anidado en la historia infantil', async () => {
+    const { repositorio, historiaClinica } = crearRepositorio();
+
+    await repositorio.crear('f1', null, 'REHAB_INFANTIL', datosCarlos(), {
+      parentesco: 'MADRE',
+      nombre: 'Laura',
+      apellido: null,
+      cedula: null,
+      fechaNacimiento: '1991-07-30',
+      estadoCivil: null,
+      gradoInstruccion: null,
+      ocupacion: null,
+    });
+
+    expect(historiaClinica.create.mock.calls[0]![0].data.representante).toEqual({
+      create: expect.objectContaining({
+        nombre: 'Laura',
+        fechaNacimiento: new Date('1991-07-30T00:00:00.000Z'),
+      }),
+    });
+  });
+
   it('reutiliza el paciente existente sin crear otro', async () => {
     const { repositorio, historiaClinica, paciente } = crearRepositorio();
 

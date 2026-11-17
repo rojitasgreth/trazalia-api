@@ -202,6 +202,71 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     await crear({ ...sofia, nombre: 'SOFÍA' }).expect(409);
   });
 
+  it('AC-011: una historia infantil se guarda sin representante, pero no puede iniciar la valoración', async () => {
+    const { crear } = await loginComo();
+
+    const respuesta = await crear({
+      tipo: 'REHAB_INFANTIL',
+      nombre: 'Sofía',
+      apellido: 'Martínez',
+      sinDocumento: true,
+      fechaNacimiento: '2022-06-10',
+      sexo: 'FEMENINO',
+      dirEstado: 'Miranda',
+      dirMunicipio: 'Sucre',
+      dirParroquia: 'Petare',
+      dirComunidad: 'Sector 3',
+      telefono: '0424-555-1190',
+    }).expect(201);
+
+    expect(respuesta.body.historia).toMatchObject({
+      sinDocumento: true,
+      nacionalidad: null,
+      representante: null,
+      puedeIniciarValoracion: false,
+    });
+    expect(respuesta.body.historia.camposFaltantes).toEqual(
+      expect.arrayContaining(['representante.parentesco', 'representante.nombre']),
+    );
+  });
+
+  it('RF-015: con el representante completo, la historia infantil queda lista para valorar', async () => {
+    const { crear } = await loginComo();
+
+    const respuesta = await crear({
+      tipo: 'REHAB_INFANTIL',
+      nombre: 'Mateo',
+      apellido: 'Rivas',
+      nacionalidad: null,
+      cedula: '32123456',
+      fechaNacimiento: '2020-02-04',
+      sexo: 'MASCULINO',
+      dirEstado: 'Lara',
+      dirMunicipio: 'Iribarren',
+      dirParroquia: 'Catedral',
+      dirComunidad: 'Centro',
+      telefono: '0414-555-6610',
+      representante: {
+        parentesco: 'PADRE',
+        nombre: 'José',
+        apellido: 'Rivas',
+        cedula: '12.345.678',
+        fechaNacimiento: '1988-01-20',
+        estadoCivil: 'Casado(a)',
+        gradoInstruccion: 'Universitario',
+        ocupacion: 'Ingeniero',
+      },
+    }).expect(201);
+
+    expect(respuesta.body.historia.representante).toMatchObject({
+      parentesco: 'PADRE',
+      cedula: '12345678',
+      fechaNacimiento: '1988-01-20',
+    });
+    expect(respuesta.body.historia.camposFaltantes).toEqual([]);
+    expect(respuesta.body.historia.puedeIniciarValoracion).toBe(true);
+  });
+
   it('AC-013/§18: aislamiento entre dos fisioterapeutas con documentos idénticos', async () => {
     const a = await loginComo();
     const b = await loginComo();

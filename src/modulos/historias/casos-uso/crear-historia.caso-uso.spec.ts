@@ -43,6 +43,7 @@ describe('CrearHistoriaCasoUso', () => {
       null,
       'TRAUMA_ADULTO',
       expect.objectContaining({ nombre: 'Carlos', cedula: '15482301' }),
+      null,
     );
     expect(historia.idHistoria).toBe('nueva');
     expect(auditoria.registrar).toHaveBeenCalledWith({
@@ -95,6 +96,7 @@ describe('CrearHistoriaCasoUso', () => {
       'p-carlos',
       'TRAUMA_ADULTO',
       expect.anything(),
+      null,
     );
   });
 
@@ -154,5 +156,47 @@ describe('CrearHistoriaCasoUso', () => {
     vi.mocked(historias.crear).mockRejectedValue(new Error('caída'));
 
     await expect(casoUso.ejecutar('f1', COMANDO)).rejects.toThrow('caída');
+  });
+
+  it('AC-011/RF-027: crea una historia infantil con su representante normalizado', async () => {
+    const { casoUso, historias } = crearCasoUso();
+
+    await casoUso.ejecutar('f1', {
+      tipo: 'REHAB_INFANTIL',
+      nombre: 'Sofía',
+      apellido: 'Martínez',
+      sinDocumento: true,
+      fechaNacimiento: '2022-06-10',
+      representante: { parentesco: 'MADRE', nombre: ' Laura ', cedula: '18.220.417' },
+    });
+
+    expect(historias.crear).toHaveBeenCalledWith(
+      'f1',
+      null,
+      'REHAB_INFANTIL',
+      expect.objectContaining({ sinDocumento: true }),
+      expect.objectContaining({ parentesco: 'MADRE', nombre: 'Laura', cedula: '18220417' }),
+    );
+  });
+
+  it('ignora el representante en los tipos de adulto', async () => {
+    const { casoUso, historias } = crearCasoUso();
+
+    await casoUso.ejecutar('f1', { ...COMANDO, representante: { nombre: 'Laura' } });
+
+    expect(vi.mocked(historias.crear).mock.calls[0]![4]).toBeNull();
+  });
+
+  it('rechaza una cédula de representante con formato inválido', async () => {
+    const { casoUso } = crearCasoUso();
+
+    const intento = casoUso.ejecutar('f1', {
+      tipo: 'REHAB_INFANTIL',
+      nombre: 'Sofía',
+      apellido: 'Martínez',
+      representante: { cedula: '1234567890' },
+    });
+
+    await expect(intento).rejects.toThrow(BadRequestException);
   });
 });
