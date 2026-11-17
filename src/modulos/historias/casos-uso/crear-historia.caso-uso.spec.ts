@@ -3,6 +3,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import type { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
 import { filaHistoria } from '../pruebas/fabricas.js';
 import type { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
+import { BuscarCoincidenciasCasoUso } from './buscar-coincidencias.caso-uso.js';
 import { CrearHistoriaCasoUso, type CrearHistoriaComando } from './crear-historia.caso-uso.js';
 
 function crearCasoUso() {
@@ -13,7 +14,15 @@ function crearCasoUso() {
     listarOtrasDelPaciente: vi.fn().mockResolvedValue([]),
   } as unknown as HistoriaRepositorio;
   const auditoria = { registrar: vi.fn() } as unknown as AuditoriaServicio;
-  return { casoUso: new CrearHistoriaCasoUso(historias, auditoria), historias, auditoria };
+  return {
+    casoUso: new CrearHistoriaCasoUso(
+      historias,
+      new BuscarCoincidenciasCasoUso(historias),
+      auditoria,
+    ),
+    historias,
+    auditoria,
+  };
 }
 
 const COMANDO: CrearHistoriaComando = {

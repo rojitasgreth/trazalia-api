@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import {
   AutenticacionGuard,
@@ -8,12 +8,17 @@ import { CsrfGuard } from '../acceso/guardias/csrf.guard.js';
 import { Roles } from '../acceso/guardias/roles.decorator.js';
 import { RolesGuard } from '../acceso/guardias/roles.guard.js';
 import { UsuarioActual } from '../acceso/guardias/usuario-actual.decorator.js';
+import {
+  BuscarCoincidenciasCasoUso,
+  type ResultadoCoincidencia,
+} from './casos-uso/buscar-coincidencias.caso-uso.js';
 import { CrearHistoriaCasoUso } from './casos-uso/crear-historia.caso-uso.js';
 import {
   ListarHistoriasCasoUso,
   type PaginaHistorias,
 } from './casos-uso/listar-historias.caso-uso.js';
 import { ObtenerHistoriaCasoUso } from './casos-uso/obtener-historia.caso-uso.js';
+import { esquemaBuscarCoincidencias } from './dto/buscar-coincidencias.dto.js';
 import { esquemaCrearHistoria } from './dto/crear-historia.dto.js';
 import { esquemaListarHistorias } from './dto/listar-historias.dto.js';
 import type { HistoriaDetalle } from './vista/historia-vista.js';
@@ -28,6 +33,7 @@ export class HistoriasController {
     private readonly crearHistoria: CrearHistoriaCasoUso,
     private readonly listarHistorias: ListarHistoriasCasoUso,
     private readonly obtenerHistoria: ObtenerHistoriaCasoUso,
+    private readonly buscarCoincidencias: BuscarCoincidenciasCasoUso,
   ) {}
 
   @Get()
@@ -46,6 +52,19 @@ export class HistoriasController {
   ): Promise<{ historia: HistoriaDetalle }> {
     const historia = await this.crearHistoria.ejecutar(fisio.idUsuario, cuerpo);
     return { historia };
+  }
+
+  // B13/B14: antes de guardar, ¿duplicado del mismo tipo u otra historia del
+  // mismo paciente para autocompletar? (RF-010, RF-012)
+  @Post('coincidencias')
+  @UseGuards(CsrfGuard)
+  @HttpCode(200)
+  async postCoincidencias(
+    @UsuarioActual() fisio: UsuarioAutenticado,
+    @Body({ schema: esquemaBuscarCoincidencias })
+    cuerpo: z.infer<typeof esquemaBuscarCoincidencias>,
+  ): Promise<ResultadoCoincidencia> {
+    return this.buscarCoincidencias.ejecutar(fisio.idUsuario, cuerpo);
   }
 
   @Get(':id')

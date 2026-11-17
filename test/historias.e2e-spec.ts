@@ -93,6 +93,7 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     return {
       usuario,
       agente,
+      csrf,
       crear: (cuerpo: object) => agente.post(RUTA).set('X-XSRF-TOKEN', csrf).send(cuerpo),
     };
   }
@@ -267,6 +268,47 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     expect(respuesta.body.historia.puedeIniciarValoracion).toBe(true);
   });
 
+  it('AC-007/B14: consulta coincidencias para autocompletar o detectar duplicados', async () => {
+    const { agente, crear, csrf } = await loginComo();
+    const consultar = (cuerpo: object) =>
+      agente.post(`${RUTA}/coincidencias`).set('X-XSRF-TOKEN', csrf).send(cuerpo).expect(200);
+    await crear({
+      ...CARLOS,
+      demandasFisicas: 'Oficina',
+      contactoNombre: 'Patricia Andrade',
+    }).expect(201);
+
+    const ninguna = await consultar({ tipo: 'NEURO_ADULTO', nacionalidad: 'V', cedula: '1' });
+    expect(ninguna.body).toEqual({ resultado: 'ninguna' });
+
+    const otroTipo = await consultar({
+      tipo: 'NEURO_ADULTO',
+      nacionalidad: 'V',
+      cedula: '15.482.301',
+    });
+    expect(otroTipo.body).toMatchObject({
+      resultado: 'autocompletar',
+      historia: { tipo: 'TRAUMA_ADULTO' },
+      datos: { nombre: 'Carlos', contactoNombre: 'Patricia Andrade', demandasFisicas: null },
+    });
+
+    const mismoTipo = await consultar({
+      tipo: 'TRAUMA_ADULTO',
+      nacionalidad: 'V',
+      cedula: '15482301',
+    });
+    expect(mismoTipo.body.resultado).toBe('duplicado');
+
+    // Otro fisioterapeuta no descubre nada con la misma cédula (§7.2).
+    const otro = await loginComo();
+    const ajena = await otro.agente
+      .post(`${RUTA}/coincidencias`)
+      .set('X-XSRF-TOKEN', otro.csrf)
+      .send({ tipo: 'NEURO_ADULTO', nacionalidad: 'V', cedula: '15482301' })
+      .expect(200);
+    expect(ajena.body).toEqual({ resultado: 'ninguna' });
+  });
+
   it('AC-013/§18: aislamiento entre dos fisioterapeutas con documentos idénticos', async () => {
     const a = await loginComo();
     const b = await loginComo();
@@ -287,7 +329,7 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
 
     const respuestas = await Promise.all([crear(CARLOS), crear(CARLOS), crear(CARLOS)]);
 
-    expect(respuestas.map((r) => r.status).sort()).toEqual([201, 409, 409]);
+    expect(respuestas.map((r) => r.status).sort((a, b) => a - b)).toEqual([201, 409, 409]);
     expect(
       await prisma.historiaClinica.count({ where: { idFisioterapeuta: usuario.idUsuario } }),
     ).toBe(1);
