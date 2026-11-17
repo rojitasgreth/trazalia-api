@@ -162,6 +162,51 @@ export class HistoriaRepositorio {
     });
   }
 
+  /**
+   * SPEC §13.3: borrado definitivo. En la misma transacción elimina el ancla
+   * del paciente si se queda sin historias y ejecuta `auditar`; si la
+   * auditoría falla, no se borra nada (RF-021).
+   */
+  async eliminar(
+    idFisioterapeuta: string,
+    historia: Pick<HistoriaConRepresentante, 'idHistoria' | 'idPaciente'>,
+    auditar: (tx: Prisma.TransactionClient) => Promise<void>,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.historiaClinica.delete({
+        where: { idHistoria: historia.idHistoria, idFisioterapeuta },
+      });
+      const restantes = await tx.historiaClinica.count({
+        where: { idPaciente: historia.idPaciente, idFisioterapeuta },
+      });
+      if (restantes === 0) {
+        await tx.paciente.delete({ where: { idPaciente: historia.idPaciente } });
+      }
+      await auditar(tx);
+    });
+  }
+
+  /** §11: archivar (solo lectura) o desarchivar. */
+  async cambiarArchivo(
+    idFisioterapeuta: string,
+    idHistoria: string,
+    archivada: boolean,
+  ): Promise<HistoriaConRepresentante> {
+    return this.prisma.historiaClinica.update({
+      where: { idHistoria, idFisioterapeuta },
+      data: { archivada, fechaArchivo: archivada ? new Date() : null },
+      include: INCLUIR,
+    });
+  }
+
+  /** RF-017: Borrador → Activa al completarse la primera valoración. */
+  async marcarActiva(idFisioterapeuta: string, idHistoria: string): Promise<void> {
+    await this.prisma.historiaClinica.update({
+      where: { idHistoria, idFisioterapeuta, estado: 'BORRADOR', archivada: false },
+      data: { estado: 'ACTIVA' },
+    });
+  }
+
   async buscarPorId(
     idFisioterapeuta: string,
     idHistoria: string,

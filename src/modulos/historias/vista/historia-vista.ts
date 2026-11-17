@@ -34,6 +34,8 @@ export interface HistoriaDetalle extends HistoriaResumen {
   representante: DatosRepresentante | null;
   camposFaltantes: string[];
   puedeIniciarValoracion: boolean;
+  /** §13: con registros clínicos no se elimina; se archiva. */
+  tieneRegistrosClinicos: boolean;
   otrasHistorias: HistoriaDelPaciente[];
 }
 
@@ -102,6 +104,7 @@ function aDatosRepresentante(h: HistoriaConRepresentante): DatosRepresentante | 
 export function aHistoriaDetalle(
   h: HistoriaConRepresentante,
   otrasHistorias: HistoriaDelPaciente[],
+  tieneRegistrosClinicos = false,
 ): HistoriaDetalle {
   const datos = aDatosPersonales(h);
   const representante = aDatosRepresentante(h);
@@ -112,6 +115,7 @@ export function aHistoriaDetalle(
     representante,
     camposFaltantes,
     puedeIniciarValoracion: puedeIniciarValoracion(h.estado, h.archivada, camposFaltantes),
+    tieneRegistrosClinicos,
     otrasHistorias,
   };
 }

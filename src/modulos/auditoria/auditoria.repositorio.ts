@@ -29,8 +29,12 @@ export interface PaginaEventosAuditoria {
 export class AuditoriaRepositorio {
   constructor(private readonly prisma: PrismaService) {}
 
-  async crear(evento: NuevoEventoAuditoria): Promise<void> {
-    await this.prisma.eventoAuditoria.create({
+  /** Con `cliente` se escribe dentro de una transacción ajena (p. ej. un borrado). */
+  async crear(
+    evento: NuevoEventoAuditoria,
+    cliente: Pick<Prisma.TransactionClient, 'eventoAuditoria'> = this.prisma,
+  ): Promise<void> {
+    await cliente.eventoAuditoria.create({
       data: {
         ...evento,
         metadatosMinimos: evento.metadatosMinimos as Prisma.InputJsonValue | undefined,

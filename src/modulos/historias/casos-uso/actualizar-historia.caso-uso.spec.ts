@@ -1,3 +1,4 @@
+import { SinRegistrosClinicos } from '../puertos/registros-clinicos.js';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import type { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
@@ -34,6 +35,7 @@ function crearCasoUso() {
     historias,
     new BuscarCoincidenciasCasoUso(historias),
     auditoria,
+    new SinRegistrosClinicos(),
   );
   return { casoUso, historias, auditoria };
 }
