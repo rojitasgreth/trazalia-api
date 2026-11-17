@@ -8,15 +8,22 @@ function crearRepositorio() {
     findFirst: vi.fn().mockResolvedValue(null),
     count: vi.fn().mockResolvedValue(0),
     create: vi.fn().mockResolvedValue({ idHistoria: 'h1' }),
+    update: vi.fn().mockResolvedValue({ idHistoria: 'h1' }),
   };
   const paciente = { create: vi.fn().mockResolvedValue({ idPaciente: 'p-nuevo' }) };
-  const tx = { historiaClinica, paciente };
+  const representanteHistoria = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
+  const tx = { historiaClinica, paciente, representanteHistoria };
   const prisma = {
     historiaClinica,
     paciente,
     $transaction: vi.fn((fn: (cliente: typeof tx) => unknown) => fn(tx)),
   } as unknown as PrismaService;
-  return { repositorio: new HistoriaRepositorio(prisma), historiaClinica, paciente };
+  return {
+    repositorio: new HistoriaRepositorio(prisma),
+    historiaClinica,
+    paciente,
+    representanteHistoria,
+  };
 }
 
 describe('HistoriaRepositorio', () => {
@@ -105,6 +112,56 @@ describe('HistoriaRepositorio', () => {
     expect(historiaClinica.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ idPaciente: 'p-carlos' }) }),
     );
+  });
+
+  it('ADR-0002: actualiza la historia y propaga en la misma transacción', async () => {
+    const { repositorio, historiaClinica, representanteHistoria } = crearRepositorio();
+
+    await repositorio.actualizar('f1', 'h1', datosCarlos(), null, [
+      { idHistoria: 'h2', cambios: { telefono: '0424', fechaNacimiento: '1985-03-14' } },
+      { idHistoria: 'h3', cambios: { nombre: 'Carlos' } },
+    ]);
+
+    expect(representanteHistoria.deleteMany).toHaveBeenCalledWith({ where: { idHistoria: 'h1' } });
+    expect(historiaClinica.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { idHistoria: 'h1', idFisioterapeuta: 'f1', archivada: false },
+      }),
+    );
+    expect(historiaClinica.update).toHaveBeenNthCalledWith(2, {
+      where: { idHistoria: 'h2', idFisioterapeuta: 'f1', archivada: false },
+      data: { telefono: '0424', fechaNacimiento: new Date('1985-03-14T00:00:00.000Z') },
+    });
+    expect(historiaClinica.update).toHaveBeenNthCalledWith(3, {
+      where: { idHistoria: 'h3', idFisioterapeuta: 'f1', archivada: false },
+      data: { nombre: 'Carlos' },
+    });
+  });
+
+  it('reemplaza el representante al actualizar', async () => {
+    const { repositorio, historiaClinica } = crearRepositorio();
+
+    await repositorio.actualizar(
+      'f1',
+      'h1',
+      datosCarlos(),
+      {
+        parentesco: 'PADRE',
+        nombre: 'José',
+        apellido: null,
+        cedula: null,
+        fechaNacimiento: null,
+        estadoCivil: null,
+        gradoInstruccion: null,
+        ocupacion: null,
+      },
+      [],
+    );
+
+    expect(historiaClinica.update.mock.calls[0]![0].data.representante).toEqual({
+      create: expect.objectContaining({ parentesco: 'PADRE', nombre: 'José' }),
+    });
   });
 
   it('obtiene por id siempre filtrando por propietario', async () => {

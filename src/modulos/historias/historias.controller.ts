@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { z } from 'zod';
 import {
   AutenticacionGuard,
@@ -8,6 +18,7 @@ import { CsrfGuard } from '../acceso/guardias/csrf.guard.js';
 import { Roles } from '../acceso/guardias/roles.decorator.js';
 import { RolesGuard } from '../acceso/guardias/roles.guard.js';
 import { UsuarioActual } from '../acceso/guardias/usuario-actual.decorator.js';
+import { ActualizarHistoriaCasoUso } from './casos-uso/actualizar-historia.caso-uso.js';
 import {
   BuscarCoincidenciasCasoUso,
   type ResultadoCoincidencia,
@@ -18,6 +29,7 @@ import {
   type PaginaHistorias,
 } from './casos-uso/listar-historias.caso-uso.js';
 import { ObtenerHistoriaCasoUso } from './casos-uso/obtener-historia.caso-uso.js';
+import { esquemaActualizarHistoria } from './dto/actualizar-historia.dto.js';
 import { esquemaBuscarCoincidencias } from './dto/buscar-coincidencias.dto.js';
 import { esquemaCrearHistoria } from './dto/crear-historia.dto.js';
 import { esquemaListarHistorias } from './dto/listar-historias.dto.js';
@@ -34,6 +46,7 @@ export class HistoriasController {
     private readonly listarHistorias: ListarHistoriasCasoUso,
     private readonly obtenerHistoria: ObtenerHistoriaCasoUso,
     private readonly buscarCoincidencias: BuscarCoincidenciasCasoUso,
+    private readonly actualizarHistoria: ActualizarHistoriaCasoUso,
   ) {}
 
   @Get()
@@ -73,6 +86,19 @@ export class HistoriasController {
     @Param('id', { schema: z.string().uuid() }) id: string,
   ): Promise<{ historia: HistoriaDetalle }> {
     const historia = await this.obtenerHistoria.ejecutar(fisio.idUsuario, id);
+    return { historia };
+  }
+
+  // B16–B18 / RF-018: edición de datos personales; propagar=true aplica los
+  // cambios compartidos a las demás historias no archivadas (RF-014).
+  @Patch(':id')
+  @UseGuards(CsrfGuard)
+  async patchActualizar(
+    @UsuarioActual() fisio: UsuarioAutenticado,
+    @Param('id', { schema: z.string().uuid() }) id: string,
+    @Body({ schema: esquemaActualizarHistoria }) cuerpo: z.infer<typeof esquemaActualizarHistoria>,
+  ): Promise<{ historia: HistoriaDetalle }> {
+    const historia = await this.actualizarHistoria.ejecutar(fisio.idUsuario, id, cuerpo);
     return { historia };
   }
 }

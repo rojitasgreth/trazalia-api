@@ -30,6 +30,7 @@ export interface HistoriaDelPaciente {
   tipo: TipoHistoria;
   estado: EstadoHistoria;
   archivada: boolean;
+  sinDocumento: boolean;
 }
 
 /** `AAAA-MM-DD` ↔ columna DATE (medianoche UTC, sin desplazamiento de zona). */
@@ -43,6 +44,17 @@ export function deFechaBd(fecha: Date | null): string | null {
 
 function aColumnas(datos: DatosPersonales) {
   return { ...datos, fechaNacimiento: aFechaBd(datos.fechaNacimiento) };
+}
+
+function aColumnasParciales(cambios: Partial<DatosPersonales>) {
+  return 'fechaNacimiento' in cambios
+    ? { ...cambios, fechaNacimiento: aFechaBd(cambios.fechaNacimiento ?? null) }
+    : cambios;
+}
+
+export interface Propagacion {
+  idHistoria: string;
+  cambios: Partial<DatosPersonales>;
 }
 
 export function aColumnasRepresentante(representante: DatosRepresentante) {
@@ -116,6 +128,40 @@ export class HistoriaRepositorio {
     });
   }
 
+  /**
+   * SPEC §10.2 (ADR-0002): actualiza la historia y propaga los cambios a otras
+   * historias no archivadas del paciente en una sola transacción; si algo
+   * falla, no se modifica ninguna. El representante se reemplaza completo.
+   */
+  async actualizar(
+    idFisioterapeuta: string,
+    idHistoria: string,
+    datos: DatosPersonales,
+    representante: DatosRepresentante | null,
+    propagaciones: readonly Propagacion[],
+  ): Promise<HistoriaConRepresentante> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.representanteHistoria.deleteMany({ where: { idHistoria } });
+      const historia = await tx.historiaClinica.update({
+        where: { idHistoria, idFisioterapeuta, archivada: false },
+        data: {
+          ...aColumnas(datos),
+          ...(representante
+            ? { representante: { create: aColumnasRepresentante(representante) } }
+            : {}),
+        },
+        include: INCLUIR,
+      });
+      for (const propagacion of propagaciones) {
+        await tx.historiaClinica.update({
+          where: { idHistoria: propagacion.idHistoria, idFisioterapeuta, archivada: false },
+          data: aColumnasParciales(propagacion.cambios),
+        });
+      }
+      return historia;
+    });
+  }
+
   async buscarPorId(
     idFisioterapeuta: string,
     idHistoria: string,
@@ -134,7 +180,7 @@ export class HistoriaRepositorio {
   ): Promise<HistoriaDelPaciente[]> {
     return this.prisma.historiaClinica.findMany({
       where: { idFisioterapeuta, idPaciente, idHistoria: { not: excluirIdHistoria } },
-      select: { idHistoria: true, tipo: true, estado: true, archivada: true },
+      select: { idHistoria: true, tipo: true, estado: true, archivada: true, sinDocumento: true },
       orderBy: { fechaCreacion: 'asc' },
     });
   }
