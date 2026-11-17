@@ -63,6 +63,42 @@ describe('calcularCamposFaltantes (SPEC §9.1)', () => {
   });
 });
 
+describe('calcularCamposFaltantes con modalidad (SPEC v1.4 §8.6)', () => {
+  it('sin modalidad falta la modalidad', () => {
+    expect(
+      calcularCamposFaltantes(
+        'TRAUMA_ADULTO',
+        datosCarlos({ modalidad: null, idCentro: null }),
+        null,
+      ),
+    ).toEqual(['modalidad']);
+  });
+
+  it('en centro sin centro elegido falta el centro', () => {
+    expect(calcularCamposFaltantes('TRAUMA_ADULTO', datosCarlos({ idCentro: null }), null)).toEqual(
+      ['idCentro'],
+    );
+  });
+
+  it('a domicilio, Traumatología exige la dirección del paciente', () => {
+    const datos = datosCarlos({ modalidad: 'DOMICILIO', idCentro: null });
+    expect(calcularCamposFaltantes('TRAUMA_ADULTO', datos, null)).toEqual([
+      'dirEstado',
+      'dirMunicipio',
+      'dirParroquia',
+      'dirComunidad',
+    ]);
+    const conDireccion = {
+      ...datos,
+      dirEstado: 'Miranda',
+      dirMunicipio: 'Sucre',
+      dirParroquia: 'Petare',
+      dirComunidad: 'Sector 3',
+    };
+    expect(calcularCamposFaltantes('TRAUMA_ADULTO', conDireccion, null)).toEqual([]);
+  });
+});
+
 describe('puedeIniciarValoracion (RF-016)', () => {
   it('solo en Borrador, no archivada y sin faltantes', () => {
     expect(puedeIniciarValoracion('BORRADOR', false, [])).toBe(true);

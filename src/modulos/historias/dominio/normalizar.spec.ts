@@ -68,6 +68,37 @@ describe('normalizarDatosPersonales', () => {
   });
 });
 
+describe('normalizarDatosPersonales con modalidad (SPEC v1.4 §8.6)', () => {
+  const base = { nombre: 'Carlos', apellido: 'Andrade', dirEstado: 'Miranda' as const };
+
+  it('a domicilio conserva la dirección en Traumatología y anula el centro', () => {
+    const datos = normalizarDatosPersonales('TRAUMA_ADULTO', {
+      ...base,
+      modalidad: 'DOMICILIO',
+      idCentro: '7d1c5e2a-0000-4000-8000-0000000000c1',
+    });
+    expect(datos).toMatchObject({ modalidad: 'DOMICILIO', dirEstado: 'Miranda', idCentro: null });
+  });
+
+  it('en centro conserva el centro y, en Traumatología, no la dirección', () => {
+    const datos = normalizarDatosPersonales('TRAUMA_ADULTO', {
+      ...base,
+      modalidad: 'CENTRO',
+      idCentro: '7d1c5e2a-0000-4000-8000-0000000000c1',
+    });
+    expect(datos).toMatchObject({
+      modalidad: 'CENTRO',
+      idCentro: '7d1c5e2a-0000-4000-8000-0000000000c1',
+      dirEstado: null,
+    });
+  });
+
+  it('Adulto mayor mantiene la residencia con cualquier modalidad', () => {
+    const datos = normalizarDatosPersonales('ADULTO_MAYOR', { ...base, modalidad: 'CENTRO' });
+    expect(datos.dirEstado).toBe('Miranda');
+  });
+});
+
 describe('normalizarRepresentante (SPEC §8.4)', () => {
   it('normaliza los datos del representante infantil', () => {
     expect(

@@ -1,4 +1,5 @@
 import type {
+  ModalidadAtencion,
   NacionalidadPaciente,
   ParentescoRepresentante,
   SexoPaciente,
@@ -29,6 +30,10 @@ export interface DatosPersonales {
   contactoTelefono: string | null;
   demandasFisicas: string | null;
   fuenteInformacion: string[];
+  /** SPEC v1.4 §8.6: a domicilio o en un centro médico. */
+  modalidad: ModalidadAtencion | null;
+  /** SPEC v1.4 §8.7: centro del catálogo compartido (solo con modalidad CENTRO). */
+  idCentro: string | null;
 }
 
 /** SPEC §8.4: representante único (madre o padre) de una historia infantil. */

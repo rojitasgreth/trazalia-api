@@ -52,6 +52,9 @@ export const esquemaDatosPersonales = z.object({
     .optional(),
   demandasFisicas: texto(1000),
   fuenteInformacion: z.array(z.enum(FUENTES_INFORMACION)).max(4).optional(),
+  // SPEC v1.4 §8.6/§8.7.
+  modalidad: z.enum(['DOMICILIO', 'CENTRO']).nullable().optional(),
+  idCentro: z.string().uuid().nullable().optional(),
 });
 
 export type DatosPersonalesDto = z.infer<typeof esquemaDatosPersonales>;

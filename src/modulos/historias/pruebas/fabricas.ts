@@ -1,8 +1,12 @@
 // Datos de prueba compartidos por las pruebas unitarias del módulo.
+import type { CentrosServicio } from '../../centros/centros.servicio.js';
+import type { CentroPublico } from '../../centros/vista/centro-publico.js';
 import type { DatosPersonales } from '../dominio/datos-personales.js';
 import type { HistoriaConRepresentante } from '../repositorios/historia.repositorio.js';
 
-/** Carlos Andrade, Traumatología del adulto, completo (prototipo B07/B23). */
+export const ID_CENTRO = '7d1c5e2a-0000-4000-8000-0000000000c1';
+
+/** Carlos Andrade, Traumatología del adulto, completo (prototipo B07/B23), atendido en un centro. */
 export function datosCarlos(cambios: Partial<DatosPersonales> = {}): DatosPersonales {
   return {
     nombre: 'Carlos',
@@ -28,6 +32,8 @@ export function datosCarlos(cambios: Partial<DatosPersonales> = {}): DatosPerson
     contactoTelefono: '0414-555-2290',
     demandasFisicas: 'Oficina sentado 8 h al día',
     fuenteInformacion: [],
+    modalidad: 'CENTRO',
+    idCentro: ID_CENTRO,
     ...cambios,
   };
 }
@@ -51,4 +57,24 @@ export function filaHistoria(
     representante: null,
     ...cambios,
   };
+}
+
+export const CENTRO: CentroPublico = {
+  idCentro: ID_CENTRO,
+  nombre: 'Clínica Santa Sofía',
+  estado: 'Miranda',
+  municipio: 'Sucre',
+  parroquia: 'Petare',
+  comunidad: null,
+};
+
+/** CentrosServicio de prueba: solo conoce los centros indicados. */
+export function centrosFalsos(centros: CentroPublico[] = [CENTRO]): CentrosServicio {
+  return {
+    obtener: vi.fn((ids: readonly string[]) =>
+      Promise.resolve(
+        new Map(centros.filter((c) => ids.includes(c.idCentro)).map((c) => [c.idCentro, c])),
+      ),
+    ),
+  } as unknown as CentrosServicio;
 }

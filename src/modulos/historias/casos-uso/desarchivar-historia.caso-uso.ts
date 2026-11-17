@@ -1,5 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
+import { CentrosServicio } from '../../centros/centros.servicio.js';
+import { centroDeHistoria } from '../dominio/centro-de-historia.js';
 import { REGISTROS_CLINICOS, type RegistrosClinicos } from '../puertos/registros-clinicos.js';
 import { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
 import { aHistoriaDetalle, type HistoriaDetalle } from '../vista/historia-vista.js';
@@ -11,6 +13,7 @@ export class DesarchivarHistoriaCasoUso {
   constructor(
     private readonly historias: HistoriaRepositorio,
     @Inject(REGISTROS_CLINICOS) private readonly registros: RegistrosClinicos,
+    private readonly centros: CentrosServicio,
     private readonly auditoria: AuditoriaServicio,
   ) {}
 
@@ -34,6 +37,11 @@ export class DesarchivarHistoriaCasoUso {
       this.historias.listarOtrasDelPaciente(idFisioterapeuta, disponible.idPaciente, idHistoria),
       this.registros.tieneRegistros(idFisioterapeuta, idHistoria),
     ]);
-    return aHistoriaDetalle(disponible, otras, tieneRegistros);
+    return aHistoriaDetalle(
+      disponible,
+      otras,
+      tieneRegistros,
+      await centroDeHistoria(this.centros, disponible.idCentro),
+    );
   }
 }

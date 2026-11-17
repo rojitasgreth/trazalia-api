@@ -3,7 +3,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import type { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
 import type { ActualizarHistoriaDto } from '../dto/actualizar-historia.dto.js';
-import { datosCarlos, filaHistoria } from '../pruebas/fabricas.js';
+import { centrosFalsos, datosCarlos, filaHistoria } from '../pruebas/fabricas.js';
 import type { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
 import { ActualizarHistoriaCasoUso } from './actualizar-historia.caso-uso.js';
 import { BuscarCoincidenciasCasoUso } from './buscar-coincidencias.caso-uso.js';
@@ -36,6 +36,7 @@ function crearCasoUso() {
     new BuscarCoincidenciasCasoUso(historias),
     auditoria,
     new SinRegistrosClinicos(),
+    centrosFalsos(),
   );
   return { casoUso, historias, auditoria };
 }

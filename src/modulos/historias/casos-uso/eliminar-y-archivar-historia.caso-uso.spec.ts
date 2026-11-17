@@ -1,6 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
-import { filaHistoria } from '../pruebas/fabricas.js';
+import { centrosFalsos, filaHistoria } from '../pruebas/fabricas.js';
 import type { RegistrosClinicos } from '../puertos/registros-clinicos.js';
 import type { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
 import { ArchivarHistoriaCasoUso } from './archivar-historia.caso-uso.js';
@@ -94,6 +94,7 @@ describe('ArchivarHistoriaCasoUso / DesarchivarHistoriaCasoUso (SPEC §11)', () 
       historias,
       registros(true),
       auditoria,
+      centrosFalsos(),
     ).ejecutar('f1', 'h1');
 
     expect(historias.cambiarArchivo).toHaveBeenCalledWith('f1', 'h1', true);
@@ -105,12 +106,20 @@ describe('ArchivarHistoriaCasoUso / DesarchivarHistoriaCasoUso (SPEC §11)', () 
 
   it('no archiva una historia sin registros (se puede eliminar) ni una ya archivada', async () => {
     const { historias, auditoria } = dependencias();
-    const casoUso = new ArchivarHistoriaCasoUso(historias, registros(false), auditoria);
+    const casoUso = new ArchivarHistoriaCasoUso(
+      historias,
+      registros(false),
+      auditoria,
+      centrosFalsos(),
+    );
 
     await expect(casoUso.ejecutar('f1', 'h1')).rejects.toThrow(ConflictException);
     vi.mocked(historias.buscarPorId).mockResolvedValue(filaHistoria({ archivada: true }));
     await expect(
-      new ArchivarHistoriaCasoUso(historias, registros(true), auditoria).ejecutar('f1', 'h1'),
+      new ArchivarHistoriaCasoUso(historias, registros(true), auditoria, centrosFalsos()).ejecutar(
+        'f1',
+        'h1',
+      ),
     ).rejects.toThrow(ConflictException);
     expect(historias.cambiarArchivo).not.toHaveBeenCalled();
   });
@@ -122,6 +131,7 @@ describe('ArchivarHistoriaCasoUso / DesarchivarHistoriaCasoUso (SPEC §11)', () 
     const detalle = await new DesarchivarHistoriaCasoUso(
       historias,
       registros(true),
+      centrosFalsos(),
       auditoria,
     ).ejecutar('f1', 'h1');
 
@@ -134,13 +144,21 @@ describe('ArchivarHistoriaCasoUso / DesarchivarHistoriaCasoUso (SPEC §11)', () 
 
   it('no desarchiva una historia que no está archivada; 404 si es ajena', async () => {
     const { historias, auditoria } = dependencias();
-    const casoUso = new DesarchivarHistoriaCasoUso(historias, registros(true), auditoria);
+    const casoUso = new DesarchivarHistoriaCasoUso(
+      historias,
+      registros(true),
+      centrosFalsos(),
+      auditoria,
+    );
 
     await expect(casoUso.ejecutar('f1', 'h1')).rejects.toThrow(ConflictException);
     vi.mocked(historias.buscarPorId).mockResolvedValue(null);
     await expect(casoUso.ejecutar('f2', 'h1')).rejects.toThrow(NotFoundException);
     await expect(
-      new ArchivarHistoriaCasoUso(historias, registros(true), auditoria).ejecutar('f2', 'h1'),
+      new ArchivarHistoriaCasoUso(historias, registros(true), auditoria, centrosFalsos()).ejecutar(
+        'f2',
+        'h1',
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 });

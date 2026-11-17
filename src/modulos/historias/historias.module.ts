@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccesoModule } from '../acceso/acceso.module.js';
 import { AuditoriaModule } from '../auditoria/auditoria.module.js';
+import { CentrosModule } from '../centros/centros.module.js';
 import { ActualizarHistoriaCasoUso } from './casos-uso/actualizar-historia.caso-uso.js';
 import { ArchivarHistoriaCasoUso } from './casos-uso/archivar-historia.caso-uso.js';
 import { DesarchivarHistoriaCasoUso } from './casos-uso/desarchivar-historia.caso-uso.js';
@@ -17,7 +18,7 @@ import { HistoriaRepositorio } from './repositorios/historia.repositorio.js';
 // Módulo B — Historias clínicas (SPEC v1.3). Usa de Acceso solo sus guardias
 // exportadas y de Auditoría su servicio público (Documento Cero §5).
 @Module({
-  imports: [AccesoModule, AuditoriaModule],
+  imports: [AccesoModule, AuditoriaModule, CentrosModule],
   controllers: [HistoriasController],
   providers: [
     HistoriaRepositorio,

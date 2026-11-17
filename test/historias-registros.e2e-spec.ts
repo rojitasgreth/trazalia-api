@@ -156,6 +156,11 @@ describe('Historias con registros clínicos (e2e, puerto sustituido)', () => {
         contactoNombre: 'Luis Torres',
         contactoParentesco: 'Hermano',
         contactoTelefono: '0414-555-0000',
+        modalidad: 'DOMICILIO',
+        dirEstado: 'Lara',
+        dirMunicipio: 'Iribarren',
+        dirParroquia: 'Catedral',
+        dirComunidad: 'Centro',
       })
       .expect(201);
     const id = creada.body.historia.idHistoria as string;

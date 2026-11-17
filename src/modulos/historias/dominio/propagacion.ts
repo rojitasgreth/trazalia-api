@@ -1,4 +1,4 @@
-import type { TipoHistoria } from '../../../generado/prisma/enums.js';
+import type { ModalidadAtencion, TipoHistoria } from '../../../generado/prisma/enums.js';
 import {
   CAMPOS_NO_COMPARTIBLES,
   CAMPOS_PERSONALES,
@@ -30,6 +30,8 @@ export function camposCambiados(
 interface Destino {
   tipo: TipoHistoria;
   sinDocumento: boolean;
+  /** v1.4: la dirección solo llega a Trauma/Neuro atendidas a domicilio. */
+  modalidad?: ModalidadAtencion | null;
 }
 
 /**
@@ -47,7 +49,11 @@ export function cambiosParaOtraHistoria(
   for (const campo of campos) {
     if (campo === 'nombre' || campo === 'apellido') {
       cambios[campo] = datos[campo];
-    } else if (campo !== 'nacionalidad' && campo !== 'cedula' && campoAplica(destino.tipo, campo)) {
+    } else if (
+      campo !== 'nacionalidad' &&
+      campo !== 'cedula' &&
+      campoAplica(destino.tipo, campo, destino.modalidad ?? null)
+    ) {
       (cambios as Record<CampoPersonal, unknown>)[campo] = datos[campo];
     }
   }

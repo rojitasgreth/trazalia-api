@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["acceso", "auditoria", "historias"]
+  schemas  = ["acceso", "auditoria", "centros", "historias"]
 }
 
 enum Nacionalidad {
@@ -203,6 +203,14 @@ enum SexoPaciente {
   @@schema("historias")
 }
 
+// Corte 6 (SPEC B v1.4 §8.6): dónde atiende el fisioterapeuta en esta historia.
+enum ModalidadAtencion {
+  DOMICILIO
+  CENTRO
+
+  @@schema("historias")
+}
+
 enum ParentescoRepresentante {
   MADRE
   PADRE
@@ -261,6 +269,9 @@ model HistoriaClinica {
   contactoTelefono   String?               @map("contacto_telefono")
   demandasFisicas    String?               @map("demandas_fisicas")
   fuenteInformacion  String[]              @default([]) @map("fuente_informacion")
+  // §8.6/§8.7: modalidad y centro (catálogo compartido, módulo centros; FK en SQL).
+  modalidad          ModalidadAtencion?
+  idCentro           String?               @map("id_centro")
   fechaCreacion      DateTime              @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime              @updatedAt @map("fecha_actualizacion")
 
@@ -290,4 +301,27 @@ model RepresentanteHistoria {
 
   @@map("representantes_historia")
   @@schema("historias")
+}
+
+// ─── Centros médicos (SPEC B v1.4 §8.7, ADR-0004) ──────────────────────────
+// Catálogo COMPARTIDO entre fisioterapeutas de ubicaciones de atención. No es
+// un tenant ni dueño de datos clínicos. La aplicación solo puede leer e
+// insertar (sin UPDATE/DELETE en esta fase). Duplicados: índice único por
+// nombre normalizado + estado + municipio normalizado.
+model CentroMedico {
+  idCentro                String   @id @default(uuid()) @map("id_centro")
+  nombre                  String
+  nombreNormalizado       String   @map("nombre_normalizado")
+  dirEstado               String   @map("dir_estado")
+  dirMunicipio            String   @map("dir_municipio")
+  municipioNormalizado    String   @map("municipio_normalizado")
+  dirParroquia            String   @map("dir_parroquia")
+  dirComunidad            String?  @map("dir_comunidad")
+  idFisioterapeutaCreador String   @map("id_fisioterapeuta_creador")
+  fechaCreacion           DateTime @default(now()) @map("fecha_creacion")
+
+  @@unique([nombreNormalizado, dirEstado, municipioNormalizado])
+  @@index([nombreNormalizado])
+  @@map("centros_medicos")
+  @@schema("centros")
 }
