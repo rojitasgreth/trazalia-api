@@ -1,4 +1,4 @@
-import { normalizarDatosPersonales } from './normalizar.js';
+import { normalizarDatosPersonales, normalizarRepresentante } from './normalizar.js';
 
 describe('normalizarDatosPersonales', () => {
   it('recorta textos, vacía los blancos y deja la cédula solo con dígitos', () => {
@@ -65,5 +65,33 @@ describe('normalizarDatosPersonales', () => {
     });
     expect(datos.sinDocumento).toBe(true);
     expect(datos.nacionalidad).toBeNull();
+  });
+});
+
+describe('normalizarRepresentante (SPEC §8.4)', () => {
+  it('normaliza los datos del representante infantil', () => {
+    expect(
+      normalizarRepresentante('REHAB_INFANTIL', {
+        parentesco: 'PADRE',
+        nombre: ' José ',
+        cedula: 'V-12.345.678',
+        ocupacion: '  ',
+      }),
+    ).toEqual({
+      parentesco: 'PADRE',
+      nombre: 'José',
+      apellido: null,
+      cedula: '12345678',
+      fechaNacimiento: null,
+      estadoCivil: null,
+      gradoInstruccion: null,
+      ocupacion: null,
+    });
+  });
+
+  it('un representante vacío o en un tipo de adulto es null', () => {
+    expect(normalizarRepresentante('REHAB_INFANTIL', { nombre: ' ', apellido: null })).toBeNull();
+    expect(normalizarRepresentante('REHAB_INFANTIL', null)).toBeNull();
+    expect(normalizarRepresentante('NEURO_ADULTO', { nombre: 'Laura' })).toBeNull();
   });
 });
