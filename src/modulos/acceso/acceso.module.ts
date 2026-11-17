@@ -76,6 +76,17 @@ import { UsuarioRepositorio } from './repositorios/usuario.repositorio.js';
     RestablecerContrasenaCasoUso,
     ListarAuditoriaCasoUso,
   ],
-  exports: [AutenticacionGuard, RolesGuard],
+  // Guardias para los controladores de otros módulos (p. ej. Historias). Nest
+  // instancia las guardias de @UseGuards en el módulo consumidor, por eso se
+  // exportan también sus dependencias; los demás módulos no deben usarlas
+  // directamente (Documento Cero §5).
+  exports: [
+    AutenticacionGuard,
+    RolesGuard,
+    CsrfGuard,
+    JwtServicio,
+    SesionRepositorio,
+    UsuarioRepositorio,
+  ],
 })
 export class AccesoModule {}

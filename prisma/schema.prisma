@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["acceso", "auditoria"]
+  schemas  = ["acceso", "auditoria", "historias"]
 }
 
 enum Nacionalidad {
@@ -166,4 +166,128 @@ model EventoAuditoria {
 
   @@map("eventos_auditoria")
   @@schema("auditoria")
+}
+
+// ─── Módulo B — Historias clínicas (SPEC B v1.3) ────────────────────────────
+// El propietario (id_fisioterapeuta) referencia acceso.usuarios mediante una FK
+// declarada en SQL en la migración, sin relación Prisma, para que el código del
+// módulo no navegue tablas de otro módulo (Documento Cero §5).
+
+enum TipoHistoria {
+  NEURO_ADULTO
+  TRAUMA_ADULTO
+  REHAB_INFANTIL
+  ADULTO_MAYOR
+
+  @@schema("historias")
+}
+
+enum EstadoHistoria {
+  BORRADOR
+  ACTIVA
+
+  @@schema("historias")
+}
+
+enum NacionalidadPaciente {
+  V
+  E
+
+  @@schema("historias")
+}
+
+enum SexoPaciente {
+  FEMENINO
+  MASCULINO
+
+  @@schema("historias")
+}
+
+enum ParentescoRepresentante {
+  MADRE
+  PADRE
+
+  @@schema("historias")
+}
+
+// SPEC §16 (decisión del 16-11-2026, ver docs/adr): ancla de identidad del
+// paciente. No guarda datos personales; cada historia conserva su propia copia.
+model Paciente {
+  idPaciente       String   @id @default(uuid()) @map("id_paciente")
+  idFisioterapeuta String   @map("id_fisioterapeuta")
+  fechaCreacion    DateTime @default(now()) @map("fecha_creacion")
+
+  historias HistoriaClinica[]
+
+  // Destino de la FK compuesta de historias: impide que una historia apunte a
+  // un paciente de otro fisioterapeuta.
+  @@unique([idPaciente, idFisioterapeuta])
+  @@index([idFisioterapeuta])
+  @@map("pacientes")
+  @@schema("historias")
+}
+
+// SPEC §5–§13. Los campos que no aplican al tipo quedan nulos. Unicidad de
+// duplicados por documento o (infantil sin documento) por nombre+apellido+
+// fecha: índices únicos parciales declarados en SQL en la migración.
+model HistoriaClinica {
+  idHistoria         String                @id @default(uuid()) @map("id_historia")
+  idPaciente         String                @map("id_paciente")
+  idFisioterapeuta   String                @map("id_fisioterapeuta")
+  tipo               TipoHistoria
+  estado             EstadoHistoria        @default(BORRADOR)
+  archivada          Boolean               @default(false)
+  fechaArchivo       DateTime?             @map("fecha_archivo")
+  nombre             String
+  apellido           String
+  nacionalidad       NacionalidadPaciente?
+  cedula             String?
+  sinDocumento       Boolean               @default(false) @map("sin_documento")
+  fechaNacimiento    DateTime?             @map("fecha_nacimiento") @db.Date
+  sexo               SexoPaciente?
+  dominancia         String?
+  ocupacion          String?
+  nivelEducativo     String?               @map("nivel_educativo")
+  estadoCivil        String?               @map("estado_civil")
+  lugarNacimiento    String?               @map("lugar_nacimiento")
+  telefono           String?
+  correo             String?
+  dirEstado          String?               @map("dir_estado")
+  dirMunicipio       String?               @map("dir_municipio")
+  dirParroquia       String?               @map("dir_parroquia")
+  dirComunidad       String?               @map("dir_comunidad")
+  contactoNombre     String?               @map("contacto_nombre")
+  contactoParentesco String?               @map("contacto_parentesco")
+  contactoTelefono   String?               @map("contacto_telefono")
+  demandasFisicas    String?               @map("demandas_fisicas")
+  fuenteInformacion  String[]              @default([]) @map("fuente_informacion")
+  fechaCreacion      DateTime              @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime              @updatedAt @map("fecha_actualizacion")
+
+  paciente      Paciente               @relation(fields: [idPaciente, idFisioterapeuta], references: [idPaciente, idFisioterapeuta])
+  representante RepresentanteHistoria?
+
+  @@unique([idPaciente, tipo])
+  @@index([idFisioterapeuta, archivada, fechaActualizacion])
+  @@index([idFisioterapeuta, cedula])
+  @@map("historias_clinicas")
+  @@schema("historias")
+}
+
+// SPEC §8.4: un único representante (madre o padre) por historia infantil.
+model RepresentanteHistoria {
+  idHistoria       String                   @id @map("id_historia")
+  parentesco       ParentescoRepresentante?
+  nombre           String?
+  apellido         String?
+  cedula           String?
+  fechaNacimiento  DateTime?                @map("fecha_nacimiento") @db.Date
+  estadoCivil      String?                  @map("estado_civil")
+  gradoInstruccion String?                  @map("grado_instruccion")
+  ocupacion        String?
+
+  historia HistoriaClinica @relation(fields: [idHistoria], references: [idHistoria], onDelete: Cascade)
+
+  @@map("representantes_historia")
+  @@schema("historias")
 }
