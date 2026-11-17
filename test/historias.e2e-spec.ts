@@ -309,6 +309,107 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     expect(ajena.body).toEqual({ resultado: 'ninguna' });
   });
 
+  it('AC-010/RF-014: edita y propaga solo a las historias no archivadas del paciente', async () => {
+    const { agente, crear, csrf } = await loginComo();
+    const trauma = (await crear(CARLOS).expect(201)).body.historia;
+    const neuro = (await crear({ ...CARLOS, tipo: 'NEURO_ADULTO' }).expect(201)).body.historia;
+    const mayor = (await crear({ ...CARLOS, tipo: 'ADULTO_MAYOR' }).expect(201)).body.historia;
+    await prisma.historiaClinica.update({
+      where: { idHistoria: mayor.idHistoria },
+      data: { archivada: true, fechaArchivo: new Date() },
+    });
+    const editar = (cuerpo: object) =>
+      agente.patch(`${RUTA}/${trauma.idHistoria}`).set('X-XSRF-TOKEN', csrf).send(cuerpo);
+
+    // Solo esta historia.
+    const soloEsta = await editar({ ...CARLOS, telefono: '0424-555-1111' }).expect(200);
+    expect(soloEsta.body.historia.telefono).toBe('0424-555-1111');
+    const neuroIntacta = await prisma.historiaClinica.findUniqueOrThrow({
+      where: { idHistoria: neuro.idHistoria },
+    });
+    expect(neuroIntacta.telefono).toBe('0412-555-0134');
+
+    // También las demás: la archivada no cambia.
+    await editar({
+      ...CARLOS,
+      telefono: '0424-555-8890',
+      demandasFisicas: 'Oficina',
+      propagar: true,
+    }).expect(200);
+    const [neuroDespues, mayorDespues] = await Promise.all([
+      prisma.historiaClinica.findUniqueOrThrow({ where: { idHistoria: neuro.idHistoria } }),
+      prisma.historiaClinica.findUniqueOrThrow({ where: { idHistoria: mayor.idHistoria } }),
+    ]);
+    expect(neuroDespues.telefono).toBe('0424-555-8890');
+    expect(neuroDespues.demandasFisicas).toBeNull();
+    expect(mayorDespues.telefono).toBe('0412-555-0134');
+
+    const auditoria = await prisma.eventoAuditoria.findFirst({
+      where: { tipoEvento: 'actualizacion_historia' },
+      orderBy: { fechaEvento: 'desc' },
+    });
+    expect(auditoria?.metadatosMinimos).toEqual({
+      idHistoria: trauma.idHistoria,
+      campos: ['telefono'],
+      historiasPropagadas: [neuro.idHistoria],
+    });
+
+    // Una historia archivada es de solo lectura.
+    await agente
+      .patch(`${RUTA}/${mayor.idHistoria}`)
+      .set('X-XSRF-TOKEN', csrf)
+      .send({ ...CARLOS, tipo: undefined })
+      .expect(409);
+  });
+
+  it('AC-005: en infantil la cédula se añade después editando la historia', async () => {
+    const { agente, crear, csrf } = await loginComo();
+    const sofia = (
+      await crear({
+        tipo: 'REHAB_INFANTIL',
+        nombre: 'Sofía',
+        apellido: 'Martínez',
+        sinDocumento: true,
+        fechaNacimiento: '2022-06-10',
+      }).expect(201)
+    ).body.historia;
+
+    const editada = await agente
+      .patch(`${RUTA}/${sofia.idHistoria}`)
+      .set('X-XSRF-TOKEN', csrf)
+      .send({
+        nombre: 'Sofía',
+        apellido: 'Martínez',
+        sinDocumento: false,
+        nacionalidad: 'V',
+        cedula: '34.567.890',
+        fechaNacimiento: '2022-06-10',
+      })
+      .expect(200);
+
+    expect(editada.body.historia).toMatchObject({
+      sinDocumento: false,
+      nacionalidad: 'V',
+      cedula: '34567890',
+    });
+  });
+
+  it('AC-013: no se puede editar la historia de otro fisioterapeuta', async () => {
+    const a = await loginComo();
+    const b = await loginComo();
+    const deA = (await a.crear(CARLOS).expect(201)).body.historia;
+
+    await b.agente
+      .patch(`${RUTA}/${deA.idHistoria}`)
+      .set('X-XSRF-TOKEN', b.csrf)
+      .send({ ...CARLOS, nombre: 'Intruso' })
+      .expect(404);
+    const intacta = await prisma.historiaClinica.findUniqueOrThrow({
+      where: { idHistoria: deA.idHistoria },
+    });
+    expect(intacta.nombre).toBe('Carlos');
+  });
+
   it('AC-013/§18: aislamiento entre dos fisioterapeutas con documentos idénticos', async () => {
     const a = await loginComo();
     const b = await loginComo();

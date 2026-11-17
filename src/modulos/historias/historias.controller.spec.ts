@@ -1,4 +1,5 @@
 import type { UsuarioAutenticado } from '../acceso/guardias/autenticacion.guard.js';
+import type { ActualizarHistoriaCasoUso } from './casos-uso/actualizar-historia.caso-uso.js';
 import type { BuscarCoincidenciasCasoUso } from './casos-uso/buscar-coincidencias.caso-uso.js';
 import type { CrearHistoriaCasoUso } from './casos-uso/crear-historia.caso-uso.js';
 import type { ListarHistoriasCasoUso } from './casos-uso/listar-historias.caso-uso.js';
@@ -13,13 +14,15 @@ function crearControlador() {
   const listar = { ejecutar: vi.fn().mockResolvedValue({ datos: [] }) };
   const obtener = { ejecutar: vi.fn().mockResolvedValue({ idHistoria: 'h1' }) };
   const coincidencias = { ejecutar: vi.fn().mockResolvedValue({ resultado: 'ninguna' }) };
+  const actualizar = { ejecutar: vi.fn().mockResolvedValue({ idHistoria: 'h1' }) };
   const controlador = new HistoriasController(
     crear as unknown as CrearHistoriaCasoUso,
     listar as unknown as ListarHistoriasCasoUso,
     obtener as unknown as ObtenerHistoriaCasoUso,
     coincidencias as unknown as BuscarCoincidenciasCasoUso,
+    actualizar as unknown as ActualizarHistoriaCasoUso,
   );
-  return { controlador, crear, listar, obtener, coincidencias };
+  return { controlador, crear, listar, obtener, coincidencias, actualizar };
 }
 
 describe('HistoriasController', () => {
@@ -49,6 +52,16 @@ describe('HistoriasController', () => {
       resultado: 'ninguna',
     });
     expect(coincidencias.ejecutar).toHaveBeenCalledWith('f1', consulta);
+  });
+
+  it('edita la historia del propietario de la sesión', async () => {
+    const { controlador, actualizar } = crearControlador();
+    const cuerpo = { nombre: 'Carlos', apellido: 'Andrade', propagar: true };
+
+    await expect(controlador.patchActualizar(FISIO, 'h1', cuerpo)).resolves.toEqual({
+      historia: { idHistoria: 'h1' },
+    });
+    expect(actualizar.ejecutar).toHaveBeenCalledWith('f1', 'h1', cuerpo);
   });
 });
 
