@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccesoModule } from '../acceso/acceso.module.js';
 import { AuditoriaModule } from '../auditoria/auditoria.module.js';
+import { BuscarCoincidenciasCasoUso } from './casos-uso/buscar-coincidencias.caso-uso.js';
 import { CrearHistoriaCasoUso } from './casos-uso/crear-historia.caso-uso.js';
 import { ListarHistoriasCasoUso } from './casos-uso/listar-historias.caso-uso.js';
 import { ObtenerHistoriaCasoUso } from './casos-uso/obtener-historia.caso-uso.js';
@@ -15,6 +16,7 @@ import { HistoriaRepositorio } from './repositorios/historia.repositorio.js';
   controllers: [HistoriasController],
   providers: [
     HistoriaRepositorio,
+    BuscarCoincidenciasCasoUso,
     CrearHistoriaCasoUso,
     ListarHistoriasCasoUso,
     ObtenerHistoriaCasoUso,

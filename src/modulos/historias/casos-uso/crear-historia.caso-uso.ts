@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import { esConflictoDeUnicidad } from '../../../compartido/prisma/errores.js';
 import type { TipoHistoria } from '../../../generado/prisma/enums.js';
 import { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
-import type { DatosPersonales } from '../dominio/datos-personales.js';
+import { BuscarCoincidenciasCasoUso } from './buscar-coincidencias.caso-uso.js';
 import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
 import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
 import type { DatosPersonalesDto } from '../dto/datos-personales.dto.js';
@@ -23,6 +23,7 @@ export interface CrearHistoriaComando extends DatosPersonalesDto {
 export class CrearHistoriaCasoUso {
   constructor(
     private readonly historias: HistoriaRepositorio,
+    private readonly coincidencias: BuscarCoincidenciasCasoUso,
     private readonly auditoria: AuditoriaServicio,
   ) {}
 
@@ -42,7 +43,7 @@ export class CrearHistoriaCasoUso {
 
     // §7.2: las coincidencias solo se buscan entre las historias propias; las
     // de otro fisioterapeuta nunca se consultan ni se revelan.
-    const coincidencias = await this.buscarCoincidencias(idFisioterapeuta, datos);
+    const coincidencias = await this.coincidencias.buscar(idFisioterapeuta, datos);
     this.rechazarSiDuplicada(coincidencias, tipo);
     // Mismo paciente con otro tipo: la nueva historia se enlaza a su ancla.
     const idPaciente = coincidencias[0]?.idPaciente ?? null;
@@ -60,7 +61,7 @@ export class CrearHistoriaCasoUso {
       // Otra solicitud creó la misma historia entre la búsqueda y el INSERT:
       // el índice único parcial lo impide (§18, concurrencia).
       if (esConflictoDeUnicidad(error)) {
-        this.rechazarSiDuplicada(await this.buscarCoincidencias(idFisioterapeuta, datos), tipo);
+        this.rechazarSiDuplicada(await this.coincidencias.buscar(idFisioterapeuta, datos), tipo);
         throw new ConflictException({ mensaje: 'La historia ya existe.' });
       }
       throw error;
@@ -79,24 +80,6 @@ export class CrearHistoriaCasoUso {
       historia.idHistoria,
     );
     return aHistoriaDetalle(historia, otras);
-  }
-
-  private async buscarCoincidencias(
-    idFisioterapeuta: string,
-    datos: DatosPersonales,
-  ): Promise<HistoriaConRepresentante[]> {
-    if (datos.nacionalidad && datos.cedula) {
-      return this.historias.buscarPorDocumento(idFisioterapeuta, datos.nacionalidad, datos.cedula);
-    }
-    if (datos.sinDocumento && datos.fechaNacimiento) {
-      return this.historias.buscarPorNombreYNacimiento(
-        idFisioterapeuta,
-        datos.nombre,
-        datos.apellido,
-        datos.fechaNacimiento,
-      );
-    }
-    return [];
   }
 
   /** RF-010: duplicado del mismo tipo → se bloquea y se ofrece abrir la existente. */
