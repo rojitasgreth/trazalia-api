@@ -1,0 +1,28 @@
+// Las 24 entidades federales de Venezuela: dirección de pacientes (SPEC B §8.1)
+// y de centros médicos (SPEC B v1.4 §8.7).
+export const ENTIDADES_FEDERALES = [
+  'Amazonas',
+  'Anzoátegui',
+  'Apure',
+  'Aragua',
+  'Barinas',
+  'Bolívar',
+  'Carabobo',
+  'Cojedes',
+  'Delta Amacuro',
+  'Distrito Capital',
+  'Falcón',
+  'Guárico',
+  'La Guaira',
+  'Lara',
+  'Mérida',
+  'Miranda',
+  'Monagas',
+  'Nueva Esparta',
+  'Portuguesa',
+  'Sucre',
+  'Táchira',
+  'Trujillo',
+  'Yaracuy',
+  'Zulia',
+] as const;

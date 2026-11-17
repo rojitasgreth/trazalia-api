@@ -53,4 +53,28 @@ describe('propagación de datos personales (SPEC §10.2, ADR-0002)', () => {
       }),
     ).toEqual({ nacionalidad: null, cedula: '81234567' });
   });
+
+  it('v1.4: la dirección llega a Traumatología solo si se atiende a domicilio', () => {
+    const datos = datosCarlos({ dirEstado: 'Miranda' });
+    expect(
+      cambiosParaOtraHistoria(['dirEstado'], datos, {
+        tipo: 'TRAUMA_ADULTO',
+        sinDocumento: false,
+        modalidad: 'DOMICILIO',
+      }),
+    ).toEqual({ dirEstado: 'Miranda' });
+    expect(
+      cambiosParaOtraHistoria(['dirEstado'], datos, {
+        tipo: 'TRAUMA_ADULTO',
+        sinDocumento: false,
+        modalidad: 'CENTRO',
+      }),
+    ).toEqual({});
+  });
+
+  it('la modalidad y el centro no se propagan', () => {
+    expect(
+      camposCambiados(datosCarlos(), datosCarlos({ modalidad: 'DOMICILIO', idCentro: null })),
+    ).toEqual([]);
+  });
 });

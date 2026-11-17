@@ -247,6 +247,7 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
       dirParroquia: 'Catedral',
       dirComunidad: 'Centro',
       telefono: '0414-555-6610',
+      modalidad: 'DOMICILIO',
       representante: {
         parentesco: 'PADRE',
         nombre: 'José',

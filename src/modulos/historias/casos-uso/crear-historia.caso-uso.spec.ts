@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import type { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
-import { filaHistoria } from '../pruebas/fabricas.js';
+import { centrosFalsos, filaHistoria, ID_CENTRO } from '../pruebas/fabricas.js';
 import type { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
 import { BuscarCoincidenciasCasoUso } from './buscar-coincidencias.caso-uso.js';
 import { CrearHistoriaCasoUso, type CrearHistoriaComando } from './crear-historia.caso-uso.js';
@@ -19,6 +19,7 @@ function crearCasoUso() {
       historias,
       new BuscarCoincidenciasCasoUso(historias),
       auditoria,
+      centrosFalsos(),
     ),
     historias,
     auditoria,
@@ -207,5 +208,30 @@ describe('CrearHistoriaCasoUso', () => {
     });
 
     await expect(intento).rejects.toThrow(BadRequestException);
+  });
+
+  it('RF-030: rechaza un centro que no existe en el catálogo', async () => {
+    const { casoUso, historias } = crearCasoUso();
+
+    await expect(
+      casoUso.ejecutar('f1', {
+        ...COMANDO,
+        modalidad: 'CENTRO',
+        idCentro: '7d1c5e2a-0000-4000-8000-00000000dead',
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(historias.crear).not.toHaveBeenCalled();
+  });
+
+  it('el detalle incluye el centro elegido', async () => {
+    const { casoUso } = crearCasoUso();
+
+    const detalle = await casoUso.ejecutar('f1', {
+      ...COMANDO,
+      modalidad: 'CENTRO',
+      idCentro: ID_CENTRO,
+    });
+
+    expect(detalle.centro).toMatchObject({ idCentro: ID_CENTRO, nombre: 'Clínica Santa Sofía' });
   });
 });

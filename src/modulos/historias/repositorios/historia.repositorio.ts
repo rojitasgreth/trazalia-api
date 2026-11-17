@@ -3,6 +3,7 @@ import { PrismaService } from '../../../compartido/prisma/prisma.service.js';
 import type { Prisma } from '../../../generado/prisma/client.js';
 import type {
   EstadoHistoria,
+  ModalidadAtencion,
   NacionalidadPaciente,
   TipoHistoria,
 } from '../../../generado/prisma/enums.js';
@@ -31,6 +32,7 @@ export interface HistoriaDelPaciente {
   estado: EstadoHistoria;
   archivada: boolean;
   sinDocumento: boolean;
+  modalidad: ModalidadAtencion | null;
 }
 
 /** `AAAA-MM-DD` ↔ columna DATE (medianoche UTC, sin desplazamiento de zona). */
@@ -225,7 +227,14 @@ export class HistoriaRepositorio {
   ): Promise<HistoriaDelPaciente[]> {
     return this.prisma.historiaClinica.findMany({
       where: { idFisioterapeuta, idPaciente, idHistoria: { not: excluirIdHistoria } },
-      select: { idHistoria: true, tipo: true, estado: true, archivada: true, sinDocumento: true },
+      select: {
+        idHistoria: true,
+        tipo: true,
+        estado: true,
+        archivada: true,
+        sinDocumento: true,
+        modalidad: true,
+      },
       orderBy: { fechaCreacion: 'asc' },
     });
   }

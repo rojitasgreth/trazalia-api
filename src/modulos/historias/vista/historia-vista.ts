@@ -3,6 +3,7 @@ import type {
   NacionalidadPaciente,
   TipoHistoria,
 } from '../../../generado/prisma/enums.js';
+import type { CentroPublico } from '../../centros/vista/centro-publico.js';
 import { calcularCamposFaltantes, puedeIniciarValoracion } from '../dominio/completitud.js';
 import type { DatosPersonales, DatosRepresentante } from '../dominio/datos-personales.js';
 import {
@@ -36,6 +37,8 @@ export interface HistoriaDetalle extends HistoriaResumen {
   puedeIniciarValoracion: boolean;
   /** §13: con registros clínicos no se elimina; se archiva. */
   tieneRegistrosClinicos: boolean;
+  /** v1.4 §8.7: centro médico de atención (modalidad CENTRO). */
+  centro: CentroPublico | null;
   otrasHistorias: HistoriaDelPaciente[];
 }
 
@@ -83,6 +86,8 @@ export function aDatosPersonales(h: HistoriaConRepresentante): DatosPersonales {
     contactoTelefono: h.contactoTelefono,
     demandasFisicas: h.demandasFisicas,
     fuenteInformacion: h.fuenteInformacion,
+    modalidad: h.modalidad,
+    idCentro: h.idCentro,
   };
 }
 
@@ -105,6 +110,7 @@ export function aHistoriaDetalle(
   h: HistoriaConRepresentante,
   otrasHistorias: HistoriaDelPaciente[],
   tieneRegistrosClinicos = false,
+  centro: CentroPublico | null = null,
 ): HistoriaDetalle {
   const datos = aDatosPersonales(h);
   const representante = aDatosRepresentante(h);
@@ -116,6 +122,7 @@ export function aHistoriaDetalle(
     camposFaltantes,
     puedeIniciarValoracion: puedeIniciarValoracion(h.estado, h.archivada, camposFaltantes),
     tieneRegistrosClinicos,
+    centro,
     otrasHistorias,
   };
 }

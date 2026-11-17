@@ -2,6 +2,9 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import { esConflictoDeUnicidad } from '../../../compartido/prisma/errores.js';
 import type { TipoHistoria } from '../../../generado/prisma/enums.js';
 import { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
+import { CentrosServicio } from '../../centros/centros.servicio.js';
+import { exigirCentroExistente } from '../dominio/centro-de-historia.js';
+
 import { BuscarCoincidenciasCasoUso } from './buscar-coincidencias.caso-uso.js';
 import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
 import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
@@ -25,6 +28,7 @@ export class CrearHistoriaCasoUso {
     private readonly historias: HistoriaRepositorio,
     private readonly coincidencias: BuscarCoincidenciasCasoUso,
     private readonly auditoria: AuditoriaServicio,
+    private readonly centros: CentrosServicio,
   ) {}
 
   async ejecutar(
@@ -40,6 +44,8 @@ export class CrearHistoriaCasoUso {
     if (errores.length > 0) {
       throw new BadRequestException({ mensaje: 'Faltan datos para crear la historia.', errores });
     }
+
+    const centro = await exigirCentroExistente(this.centros, datos.idCentro);
 
     // §7.2: las coincidencias solo se buscan entre las historias propias; las
     // de otro fisioterapeuta nunca se consultan ni se revelan.
@@ -79,7 +85,7 @@ export class CrearHistoriaCasoUso {
       historia.idPaciente,
       historia.idHistoria,
     );
-    return aHistoriaDetalle(historia, otras);
+    return aHistoriaDetalle(historia, otras, false, centro);
   }
 
   /** RF-010: duplicado del mismo tipo → se bloquea y se ofrece abrir la existente. */

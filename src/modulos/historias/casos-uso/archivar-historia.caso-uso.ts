@@ -1,5 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
+import { CentrosServicio } from '../../centros/centros.servicio.js';
+import { centroDeHistoria } from '../dominio/centro-de-historia.js';
 import { REGISTROS_CLINICOS, type RegistrosClinicos } from '../puertos/registros-clinicos.js';
 import { HistoriaRepositorio } from '../repositorios/historia.repositorio.js';
 import { aHistoriaDetalle, type HistoriaDetalle } from '../vista/historia-vista.js';
@@ -12,6 +14,7 @@ export class ArchivarHistoriaCasoUso {
     private readonly historias: HistoriaRepositorio,
     @Inject(REGISTROS_CLINICOS) private readonly registros: RegistrosClinicos,
     private readonly auditoria: AuditoriaServicio,
+    private readonly centros: CentrosServicio,
   ) {}
 
   async ejecutar(idFisioterapeuta: string, idHistoria: string): Promise<HistoriaDetalle> {
@@ -40,6 +43,11 @@ export class ArchivarHistoriaCasoUso {
       archivada.idPaciente,
       idHistoria,
     );
-    return aHistoriaDetalle(archivada, otras, true);
+    return aHistoriaDetalle(
+      archivada,
+      otras,
+      true,
+      await centroDeHistoria(this.centros, archivada.idCentro),
+    );
   }
 }

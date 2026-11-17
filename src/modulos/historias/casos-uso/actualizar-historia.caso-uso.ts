@@ -7,6 +7,9 @@ import {
 } from '@nestjs/common';
 import { esConflictoDeUnicidad } from '../../../compartido/prisma/errores.js';
 import { AuditoriaServicio } from '../../auditoria/auditoria.servicio.js';
+import { CentrosServicio } from '../../centros/centros.servicio.js';
+import { exigirCentroExistente } from '../dominio/centro-de-historia.js';
+
 import type { DatosPersonales } from '../dominio/datos-personales.js';
 import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
 import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
@@ -34,6 +37,7 @@ export class ActualizarHistoriaCasoUso {
     private readonly coincidencias: BuscarCoincidenciasCasoUso,
     private readonly auditoria: AuditoriaServicio,
     @Inject(REGISTROS_CLINICOS) private readonly registros: RegistrosClinicos,
+    private readonly centros: CentrosServicio,
   ) {}
 
   async ejecutar(
@@ -61,6 +65,7 @@ export class ActualizarHistoriaCasoUso {
       throw new BadRequestException({ mensaje: 'Faltan datos obligatorios.', errores });
     }
 
+    const centro = await exigirCentroExistente(this.centros, datos.idCentro);
     const antes = aDatosPersonales(actual);
     await this.rechazarDocumentoAjeno(idFisioterapeuta, actual, antes, datos);
 
@@ -107,7 +112,7 @@ export class ActualizarHistoriaCasoUso {
       ),
       this.registros.tieneRegistros(idFisioterapeuta, idHistoria),
     ]);
-    return aHistoriaDetalle(historia, otras, tieneRegistros);
+    return aHistoriaDetalle(historia, otras, tieneRegistros, centro);
   }
 
   /**

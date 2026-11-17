@@ -1,5 +1,5 @@
 import type { EstadoHistoria, TipoHistoria } from '../../../generado/prisma/enums.js';
-import { CAMPOS_OPCIONALES, CAMPOS_POR_TIPO } from './campos-por-tipo.js';
+import { CAMPOS_OPCIONALES, camposAplicables } from './campos-por-tipo.js';
 import {
   CAMPOS_REPRESENTANTE,
   type DatosPersonales,
@@ -30,7 +30,8 @@ export function calcularCamposFaltantes(
   if (!datos.cedula && !datos.sinDocumento) {
     faltantes.push('documento');
   }
-  for (const campo of CAMPOS_POR_TIPO[tipo]) {
+  // v1.4 §8.6: la modalidad decide si cuentan la dirección o el centro.
+  for (const campo of camposAplicables(tipo, datos.modalidad)) {
     if (!CAMPOS_OPCIONALES.includes(campo) && vacio(datos[campo])) {
       faltantes.push(campo);
     }

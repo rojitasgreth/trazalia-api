@@ -23,31 +23,5 @@ export const ESTADOS_CIVILES = [
 // SPEC §8.2: casillas de Neurología del adulto; se puede marcar más de una.
 export const FUENTES_INFORMACION = ['Paciente', 'Familiar', 'Historia', 'Mixta'] as const;
 
-// SPEC §8.1: dirección estructurada. Las 24 entidades federales de Venezuela
-// (el prototipo muestra solo una muestra).
-export const ENTIDADES_FEDERALES = [
-  'Amazonas',
-  'Anzoátegui',
-  'Apure',
-  'Aragua',
-  'Barinas',
-  'Bolívar',
-  'Carabobo',
-  'Cojedes',
-  'Delta Amacuro',
-  'Distrito Capital',
-  'Falcón',
-  'Guárico',
-  'La Guaira',
-  'Lara',
-  'Mérida',
-  'Miranda',
-  'Monagas',
-  'Nueva Esparta',
-  'Portuguesa',
-  'Sucre',
-  'Táchira',
-  'Trujillo',
-  'Yaracuy',
-  'Zulia',
-] as const;
+// SPEC §8.1: dirección estructurada (lista compartida con el módulo centros).
+export { ENTIDADES_FEDERALES } from '../../../compartido/catalogos/entidades-federales.js';

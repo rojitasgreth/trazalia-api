@@ -46,10 +46,12 @@ export function normalizarDatosPersonales(
     contactoTelefono: textoONulo(entrada.contactoTelefono),
     demandasFisicas: textoONulo(entrada.demandasFisicas),
     fuenteInformacion: [...new Set(entrada.fuenteInformacion ?? [])],
+    modalidad: entrada.modalidad ?? null,
+    idCentro: textoONulo(entrada.idCentro),
   };
 
   for (const campo of CAMPOS_PERSONALES) {
-    if (!campoAplica(tipo, campo)) {
+    if (!campoAplica(tipo, campo, datos.modalidad)) {
       if (campo === 'fuenteInformacion') datos.fuenteInformacion = [];
       else datos[campo] = null;
     }
