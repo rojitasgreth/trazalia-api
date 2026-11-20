@@ -8,6 +8,7 @@ import { AuditoriaModule } from './modulos/auditoria/auditoria.module.js';
 import { CentrosModule } from './modulos/centros/centros.module.js';
 import { HistoriasModule } from './modulos/historias/historias.module.js';
 import { SaludModule } from './modulos/salud/salud.module.js';
+import { ValoracionesModule } from './modulos/valoraciones/valoraciones.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SaludModule } from './modulos/salud/salud.module.js';
     AccesoModule,
     CentrosModule,
     HistoriasModule,
+    ValoracionesModule,
   ],
 })
 export class AppModule {}

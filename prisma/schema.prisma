@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["acceso", "auditoria", "centros", "historias"]
+  schemas  = ["acceso", "auditoria", "centros", "historias", "valoraciones"]
 }
 
 enum Nacionalidad {
@@ -380,4 +380,44 @@ model CentroMedico {
   @@index([nombreNormalizado])
   @@map("centros_medicos")
   @@schema("centros")
+}
+
+// ─── Valoraciones (SPEC Módulo C v1.1, ADR-0005) ───────────────────────────
+// Una por historia (UNIQUE). El contenido de la ficha es un documento JSONB
+// validado en el backend contra su versión de ficha. Una valoración
+// FINALIZADA no se modifica: lo impide un trigger (ver la migración).
+enum EstadoValoracion {
+  EN_CURSO
+  FINALIZADA
+
+  @@schema("valoraciones")
+}
+
+model Valoracion {
+  idValoracion         String           @id @default(uuid()) @map("id_valoracion")
+  idHistoria           String           @unique @map("id_historia")
+  idFisioterapeuta     String           @map("id_fisioterapeuta")
+  /**
+   * Nombre del fisioterapeuta al iniciar (RF-C03): lo muestran la ficha y la impresión.
+   */
+  nombreFisioterapeuta String           @map("nombre_fisioterapeuta")
+  tipo                 String
+  estado               EstadoValoracion @default(EN_CURSO)
+  versionFicha         Int              @map("version_ficha")
+  contenido            Json             @default("{}")
+  /**
+   * Foto de los datos personales al finalizar (decisión del 19-11-2026).
+   */
+  datosPersonales      Json?            @map("datos_personales")
+  /**
+   * Control de concurrencia entre pestañas (SPEC C §13).
+   */
+  version              Int              @default(1)
+  fechaInicio          DateTime         @default(now()) @map("fecha_inicio")
+  fechaFinalizacion    DateTime?        @map("fecha_finalizacion")
+  fechaActualizacion   DateTime         @updatedAt @map("fecha_actualizacion")
+
+  @@index([idFisioterapeuta])
+  @@map("valoraciones")
+  @@schema("valoraciones")
 }

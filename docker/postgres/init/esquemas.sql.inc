@@ -10,8 +10,9 @@ CREATE SCHEMA auditoria AUTHORIZATION trazalia_migrador;
 CREATE SCHEMA auditoria_historico AUTHORIZATION trazalia_migrador;
 CREATE SCHEMA historias AUTHORIZATION trazalia_migrador;
 CREATE SCHEMA centros AUTHORIZATION trazalia_migrador;
+CREATE SCHEMA valoraciones AUTHORIZATION trazalia_migrador;
 
-GRANT USAGE ON SCHEMA acceso, auditoria, historias, centros TO trazalia_app;
+GRANT USAGE ON SCHEMA acceso, auditoria, historias, centros, valoraciones TO trazalia_app;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE trazalia_migrador IN SCHEMA acceso
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO trazalia_app;
@@ -28,3 +29,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE trazalia_migrador IN SCHEMA historias
 -- Catálogo compartido de centros: solo lectura e inserción (ADR-0004).
 ALTER DEFAULT PRIVILEGES FOR ROLE trazalia_migrador IN SCHEMA centros
   GRANT SELECT, INSERT ON TABLES TO trazalia_app;
+-- Valoraciones: sin DELETE; una finalizada además es inmutable por trigger (ADR-0005).
+ALTER DEFAULT PRIVILEGES FOR ROLE trazalia_migrador IN SCHEMA valoraciones
+  GRANT SELECT, INSERT, UPDATE ON TABLES TO trazalia_app;
