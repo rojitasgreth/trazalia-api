@@ -18,6 +18,10 @@ const fechaPasada = z.iso.date().refine((fecha) => fecha <= new Date().toISOStri
   message: 'La fecha de nacimiento no puede ser futura.',
 });
 
+// Celular o teléfono: solo dígitos, máximo 11 (p. ej. 04125550000). Vacío se acepta
+// porque la normalización lo convierte en null.
+const TELEFONO = /^\s*\d{0,11}\s*$/;
+
 export const esquemaDatosPersonales = z.object({
   nombre: z.string().max(100),
   apellido: z.string().max(100),
@@ -33,8 +37,7 @@ export const esquemaDatosPersonales = z.object({
   lugarNacimiento: texto(150),
   telefono: z
     .string()
-    .max(30)
-    .regex(/^[\d\s+()-]*$/, 'El teléfono solo admite dígitos, espacios y + ( ) -.')
+    .regex(TELEFONO, 'El teléfono solo admite dígitos, máximo 11.')
     .nullable()
     .optional(),
   correo: z.email('El correo no tiene un formato válido.').max(254).nullable().optional(),
@@ -46,8 +49,7 @@ export const esquemaDatosPersonales = z.object({
   contactoParentesco: texto(60),
   contactoTelefono: z
     .string()
-    .max(30)
-    .regex(/^[\d\s+()-]*$/, 'El teléfono solo admite dígitos, espacios y + ( ) -.')
+    .regex(TELEFONO, 'El teléfono solo admite dígitos, máximo 11.')
     .nullable()
     .optional(),
   demandasFisicas: texto(1000),

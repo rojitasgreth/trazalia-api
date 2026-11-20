@@ -7,7 +7,12 @@ export const esquemaActualizarUsuario = z
   .object({
     nombre: z.string().trim().min(1).optional(),
     apellido: z.string().trim().min(1).optional(),
-    telefono: z.string().trim().min(1).nullable().optional(),
+    telefono: z
+      .string()
+      .trim()
+      .regex(/^\d{1,11}$/, 'El teléfono solo admite dígitos, máximo 11.')
+      .nullable()
+      .optional(),
     correo: z.email('El correo no tiene un formato válido.').optional(),
     rol: z.enum(['ADMINISTRADOR', 'FISIOTERAPEUTA']).optional(),
   })

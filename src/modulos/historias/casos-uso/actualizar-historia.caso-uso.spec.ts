@@ -56,12 +56,12 @@ describe('ActualizarHistoriaCasoUso', () => {
   it('B16/RF-018: guarda solo en esta historia cuando no se pide propagar', async () => {
     const { casoUso, historias, auditoria } = crearCasoUso();
 
-    await casoUso.ejecutar('f1', 'h1', comando({ telefono: '0424-555-8890' }));
+    await casoUso.ejecutar('f1', 'h1', comando({ telefono: '04245558890' }));
 
     expect(historias.actualizar).toHaveBeenCalledWith(
       'f1',
       'h1',
-      expect.objectContaining({ telefono: '0424-555-8890' }),
+      expect.objectContaining({ telefono: '04245558890' }),
       null,
       [],
     );
@@ -76,10 +76,10 @@ describe('ActualizarHistoriaCasoUso', () => {
   it('B17/RF-014: propaga a las demás historias no archivadas, nunca a las archivadas', async () => {
     const { casoUso, historias } = crearCasoUso();
 
-    await casoUso.ejecutar('f1', 'h1', comando({ telefono: '0424-555-8890', propagar: true }));
+    await casoUso.ejecutar('f1', 'h1', comando({ telefono: '04245558890', propagar: true }));
 
     expect(historias.actualizar).toHaveBeenCalledWith('f1', 'h1', expect.anything(), null, [
-      { idHistoria: 'h-neuro', cambios: { telefono: '0424-555-8890' } },
+      { idHistoria: 'h-neuro', cambios: { telefono: '04245558890' } },
     ]);
   });
 
