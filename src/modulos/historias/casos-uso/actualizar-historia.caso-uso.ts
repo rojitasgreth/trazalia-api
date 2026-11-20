@@ -12,7 +12,11 @@ import { exigirCentroExistente } from '../dominio/centro-de-historia.js';
 
 import type { DatosPersonales } from '../dominio/datos-personales.js';
 import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
-import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
+import {
+  normalizarDatosInfantiles,
+  normalizarDatosPersonales,
+  normalizarRepresentante,
+} from '../dominio/normalizar.js';
 import { camposCambiados, cambiosParaOtraHistoria } from '../dominio/propagacion.js';
 import { REGISTROS_CLINICOS, type RegistrosClinicos } from '../puertos/registros-clinicos.js';
 import type { ActualizarHistoriaDto } from '../dto/actualizar-historia.dto.js';
@@ -57,6 +61,7 @@ export class ActualizarHistoriaCasoUso {
 
     const datos = normalizarDatosPersonales(actual.tipo, comando);
     const representante = normalizarRepresentante(actual.tipo, comando.representante);
+    const infantiles = normalizarDatosInfantiles(actual.tipo, comando.datosInfantiles);
     const errores = [
       ...validarIdentificacion(actual.tipo, datos),
       ...validarRepresentante(representante),
@@ -82,6 +87,7 @@ export class ActualizarHistoriaCasoUso {
         datos,
         representante,
         propagaciones,
+        infantiles,
       );
     } catch (error) {
       if (esConflictoDeUnicidad(error)) {

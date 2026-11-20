@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { esquemaDatosPersonales } from './datos-personales.dto.js';
+import { esquemaDatosInfantiles } from './datos-infantiles.dto.js';
 import { esquemaRepresentante } from './representante.dto.js';
 
 // SPEC §13.1 y §10.2: edición de datos personales por el propietario. El
@@ -7,6 +8,7 @@ import { esquemaRepresentante } from './representante.dto.js';
 // compartidos se aplican también a las demás historias no archivadas.
 export const esquemaActualizarHistoria = esquemaDatosPersonales.extend({
   representante: esquemaRepresentante.nullable().optional(),
+  datosInfantiles: esquemaDatosInfantiles.nullable().optional(),
   propagar: z.boolean().default(false),
 });
 

@@ -5,6 +5,7 @@ import type {
 } from '../../../generado/prisma/enums.js';
 import type { CentroPublico } from '../../centros/vista/centro-publico.js';
 import { calcularCamposFaltantes, puedeIniciarValoracion } from '../dominio/completitud.js';
+import { CAMPOS_INFANTILES, type DatosInfantiles } from '../dominio/datos-infantiles.js';
 import type { DatosPersonales, DatosRepresentante } from '../dominio/datos-personales.js';
 import {
   deFechaBd,
@@ -33,6 +34,8 @@ export interface HistoriaResumen {
 export interface HistoriaDetalle extends HistoriaResumen {
   datos: DatosPersonales;
   representante: DatosRepresentante | null;
+  /** v1.6 §8.4: solo en Rehabilitación infantil. */
+  datosInfantiles: DatosInfantiles | null;
   camposFaltantes: string[];
   puedeIniciarValoracion: boolean;
   /** §13: con registros clínicos no se elimina; se archiva. */
@@ -99,11 +102,19 @@ function aDatosRepresentante(h: HistoriaConRepresentante): DatosRepresentante | 
     nombre: r.nombre,
     apellido: r.apellido,
     cedula: r.cedula,
-    fechaNacimiento: deFechaBd(r.fechaNacimiento),
+    edad: r.edad,
     estadoCivil: r.estadoCivil,
     gradoInstruccion: r.gradoInstruccion,
     ocupacion: r.ocupacion,
   };
+}
+
+function aDatosInfantiles(h: HistoriaConRepresentante): DatosInfantiles | null {
+  const d = h.datosInfantiles;
+  if (!d) return null;
+  return Object.fromEntries(
+    CAMPOS_INFANTILES.map((campo) => [campo, d[campo]]),
+  ) as unknown as DatosInfantiles;
 }
 
 export function aHistoriaDetalle(
@@ -114,11 +125,13 @@ export function aHistoriaDetalle(
 ): HistoriaDetalle {
   const datos = aDatosPersonales(h);
   const representante = aDatosRepresentante(h);
-  const camposFaltantes = calcularCamposFaltantes(h.tipo, datos, representante);
+  const datosInfantiles = aDatosInfantiles(h);
+  const camposFaltantes = calcularCamposFaltantes(h.tipo, datos, representante, datosInfantiles);
   return {
     ...aHistoriaResumen(h),
     datos,
     representante,
+    datosInfantiles,
     camposFaltantes,
     puedeIniciarValoracion: puedeIniciarValoracion(h.estado, h.archivada, camposFaltantes),
     tieneRegistrosClinicos,

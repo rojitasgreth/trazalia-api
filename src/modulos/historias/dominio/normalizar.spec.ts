@@ -1,4 +1,8 @@
-import { normalizarDatosPersonales, normalizarRepresentante } from './normalizar.js';
+import {
+  normalizarDatosPersonales,
+  normalizarRepresentante,
+  normalizarDatosInfantiles,
+} from './normalizar.js';
 
 describe('normalizarDatosPersonales', () => {
   it('recorta textos, vacía los blancos y deja la cédula solo con dígitos', () => {
@@ -113,7 +117,7 @@ describe('normalizarRepresentante (SPEC §8.4)', () => {
       nombre: 'José',
       apellido: null,
       cedula: '12345678',
-      fechaNacimiento: null,
+      edad: null,
       estadoCivil: null,
       gradoInstruccion: null,
       ocupacion: null,
@@ -124,5 +128,29 @@ describe('normalizarRepresentante (SPEC §8.4)', () => {
     expect(normalizarRepresentante('REHAB_INFANTIL', { nombre: ' ', apellido: null })).toBeNull();
     expect(normalizarRepresentante('REHAB_INFANTIL', null)).toBeNull();
     expect(normalizarRepresentante('NEURO_ADULTO', { nombre: 'Laura' })).toBeNull();
+  });
+});
+
+describe('normalizarDatosInfantiles (v1.6 §8.4)', () => {
+  it('recorta los textos, conserva los números y anula lo vacío', () => {
+    const datos = normalizarDatosInfantiles('REHAB_INFANTIL', {
+      gestas: 2,
+      vacunas: '  Completas ',
+      tipoSangre: '   ',
+      alimentacion: 'LME',
+    });
+    expect(datos).toMatchObject({
+      gestas: 2,
+      vacunas: 'Completas',
+      tipoSangre: null,
+      alimentacion: 'LME',
+    });
+    expect(datos?.apgar).toBeNull();
+  });
+
+  it('sin datos, o en un tipo de adulto, es null', () => {
+    expect(normalizarDatosInfantiles('REHAB_INFANTIL', { vacunas: ' ' })).toBeNull();
+    expect(normalizarDatosInfantiles('REHAB_INFANTIL', null)).toBeNull();
+    expect(normalizarDatosInfantiles('ADULTO_MAYOR', { gestas: 1 })).toBeNull();
   });
 });

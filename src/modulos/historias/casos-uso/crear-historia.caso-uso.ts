@@ -7,7 +7,12 @@ import { exigirCentroExistente } from '../dominio/centro-de-historia.js';
 
 import { BuscarCoincidenciasCasoUso } from './buscar-coincidencias.caso-uso.js';
 import { validarIdentificacion, validarRepresentante } from '../dominio/identificacion.js';
-import { normalizarDatosPersonales, normalizarRepresentante } from '../dominio/normalizar.js';
+import {
+  normalizarDatosInfantiles,
+  normalizarDatosPersonales,
+  normalizarRepresentante,
+} from '../dominio/normalizar.js';
+import type { DatosInfantilesDto } from '../dto/datos-infantiles.dto.js';
 import type { DatosPersonalesDto } from '../dto/datos-personales.dto.js';
 import type { RepresentanteDto } from '../dto/representante.dto.js';
 import {
@@ -19,6 +24,7 @@ import { aHistoriaDetalle, type HistoriaDetalle } from '../vista/historia-vista.
 export interface CrearHistoriaComando extends DatosPersonalesDto {
   tipo: TipoHistoria;
   representante?: RepresentanteDto | null;
+  datosInfantiles?: DatosInfantilesDto | null;
 }
 
 // Flujo §6 pasos 3–9 / RF-002, RF-006, RF-008–RF-011, RF-025.
@@ -39,6 +45,7 @@ export class CrearHistoriaCasoUso {
     const datos = normalizarDatosPersonales(tipo, comando);
     // RF-027/AC-011: la historia infantil puede crearse sin representante.
     const representante = normalizarRepresentante(tipo, comando.representante);
+    const infantiles = normalizarDatosInfantiles(tipo, comando.datosInfantiles);
 
     const errores = [...validarIdentificacion(tipo, datos), ...validarRepresentante(representante)];
     if (errores.length > 0) {
@@ -62,6 +69,7 @@ export class CrearHistoriaCasoUso {
         tipo,
         datos,
         representante,
+        infantiles,
       );
     } catch (error) {
       // Otra solicitud creó la misma historia entre la búsqueda y el INSERT:

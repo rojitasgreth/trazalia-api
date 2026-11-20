@@ -64,6 +64,7 @@ describe('ActualizarHistoriaCasoUso', () => {
       expect.objectContaining({ telefono: '04245558890' }),
       null,
       [],
+      null,
     );
     expect(auditoria.registrar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -78,9 +79,14 @@ describe('ActualizarHistoriaCasoUso', () => {
 
     await casoUso.ejecutar('f1', 'h1', comando({ telefono: '04245558890', propagar: true }));
 
-    expect(historias.actualizar).toHaveBeenCalledWith('f1', 'h1', expect.anything(), null, [
-      { idHistoria: 'h-neuro', cambios: { telefono: '04245558890' } },
-    ]);
+    expect(historias.actualizar).toHaveBeenCalledWith(
+      'f1',
+      'h1',
+      expect.anything(),
+      null,
+      [{ idHistoria: 'h-neuro', cambios: { telefono: '04245558890' } }],
+      null,
+    );
   });
 
   it('propagar sin cambios compartidos no toca otras historias', async () => {

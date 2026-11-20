@@ -50,7 +50,7 @@ describe('ObtenerHistoriaCasoUso', () => {
           nombre: 'Laura',
           apellido: 'Martínez',
           cedula: null,
-          fechaNacimiento: new Date('1991-07-30T00:00:00.000Z'),
+          edad: 35,
           estadoCivil: null,
           gradoInstruccion: null,
           ocupacion: null,
@@ -64,7 +64,7 @@ describe('ObtenerHistoriaCasoUso', () => {
       centrosFalsos(),
     ).ejecutar('f1', 'h1');
 
-    expect(detalle.representante).toMatchObject({ nombre: 'Laura', fechaNacimiento: '1991-07-30' });
+    expect(detalle.representante).toMatchObject({ nombre: 'Laura', edad: 35 });
     expect(detalle.camposFaltantes).toContain('representante.cedula');
   });
 

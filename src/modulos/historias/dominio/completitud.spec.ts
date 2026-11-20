@@ -1,4 +1,4 @@
-import { datosCarlos } from '../pruebas/fabricas.js';
+import { datosCarlos, infantilesCompletos } from '../pruebas/fabricas.js';
 import { calcularCamposFaltantes, puedeIniciarValoracion } from './completitud.js';
 import type { DatosRepresentante } from './datos-personales.js';
 
@@ -7,7 +7,7 @@ const REPRESENTANTE: DatosRepresentante = {
   nombre: 'Laura',
   apellido: 'Martínez',
   cedula: '18220417',
-  fechaNacimiento: '1991-07-30',
+  edad: 35,
   estadoCivil: 'Casado(a)',
   gradoInstruccion: 'Universitario',
   ocupacion: 'Docente',
@@ -53,12 +53,19 @@ describe('calcularCamposFaltantes (SPEC §9.1)', () => {
       dirParroquia: 'Petare',
       dirComunidad: 'Sector 3',
     });
-    expect(calcularCamposFaltantes('REHAB_INFANTIL', datos, REPRESENTANTE)).toEqual([]);
+    expect(
+      calcularCamposFaltantes('REHAB_INFANTIL', datos, REPRESENTANTE, infantilesCompletos()),
+    ).toEqual([]);
     expect(calcularCamposFaltantes('REHAB_INFANTIL', datos, null)).toContain(
       'representante.nombre',
     );
     expect(
-      calcularCamposFaltantes('REHAB_INFANTIL', datos, { ...REPRESENTANTE, ocupacion: '' }),
+      calcularCamposFaltantes(
+        'REHAB_INFANTIL',
+        datos,
+        { ...REPRESENTANTE, ocupacion: '' },
+        infantilesCompletos(),
+      ),
     ).toEqual(['representante.ocupacion']);
   });
 });
@@ -105,5 +112,45 @@ describe('puedeIniciarValoracion (RF-016)', () => {
     expect(puedeIniciarValoracion('BORRADOR', false, ['telefono'])).toBe(false);
     expect(puedeIniciarValoracion('ACTIVA', false, [])).toBe(false);
     expect(puedeIniciarValoracion('BORRADOR', true, [])).toBe(false);
+  });
+});
+
+describe('calcularCamposFaltantes: datos infantiles (v1.6 RF-028)', () => {
+  const hogar = datosCarlos({
+    dirEstado: 'Miranda',
+    dirMunicipio: 'Sucre',
+    dirParroquia: 'Petare',
+    dirComunidad: 'Sector 3',
+  });
+  const representante = {
+    parentesco: 'MADRE' as const,
+    nombre: 'Laura',
+    apellido: 'Martínez',
+    cedula: '18220417',
+    edad: 35,
+    estadoCivil: 'Casado(a)',
+    gradoInstruccion: 'Universitario',
+    ocupacion: 'Docente',
+  };
+
+  it('sin antecedentes, datos al nacer ni exámenes faltan todos los obligatorios', () => {
+    const faltantes = calcularCamposFaltantes('REHAB_INFANTIL', hogar, representante, null);
+    expect(faltantes).toContain('infantil.controlPrenatal');
+    expect(faltantes).toContain('infantil.edadGestacional');
+    expect(faltantes).toContain('infantil.evaluadoOftalmologia');
+  });
+
+  it('Otras, Otros, Complicaciones, Transfusiones y las edades calculadas no se exigen', () => {
+    const faltantes = calcularCamposFaltantes(
+      'REHAB_INFANTIL',
+      hogar,
+      representante,
+      infantilesCompletos({ vacunas: null }),
+    );
+    expect(faltantes).toEqual(['infantil.vacunas']);
+  });
+
+  it('en los tipos de adulto no se piden datos infantiles', () => {
+    expect(calcularCamposFaltantes('TRAUMA_ADULTO', datosCarlos(), null, null)).toEqual([]);
   });
 });

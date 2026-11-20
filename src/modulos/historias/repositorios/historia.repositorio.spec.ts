@@ -1,4 +1,5 @@
 import type { PrismaService } from '../../../compartido/prisma/prisma.service.js';
+import { datosInfantilesVacios } from '../dominio/datos-infantiles.js';
 import { datosCarlos } from '../pruebas/fabricas.js';
 import { aFechaBd, deFechaBd, HistoriaRepositorio } from './historia.repositorio.js';
 
@@ -16,7 +17,8 @@ function crearRepositorio() {
     delete: vi.fn().mockResolvedValue(undefined),
   };
   const representanteHistoria = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
-  const tx = { historiaClinica, paciente, representanteHistoria };
+  const datosInfantilesHistoria = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
+  const tx = { historiaClinica, paciente, representanteHistoria, datosInfantilesHistoria };
   const prisma = {
     historiaClinica,
     paciente,
@@ -27,6 +29,7 @@ function crearRepositorio() {
     historiaClinica,
     paciente,
     representanteHistoria,
+    datosInfantilesHistoria,
   };
 }
 
@@ -93,7 +96,7 @@ describe('HistoriaRepositorio', () => {
       nombre: 'Laura',
       apellido: null,
       cedula: null,
-      fechaNacimiento: '1991-07-30',
+      edad: 35,
       estadoCivil: null,
       gradoInstruccion: null,
       ocupacion: null,
@@ -102,7 +105,7 @@ describe('HistoriaRepositorio', () => {
     expect(historiaClinica.create.mock.calls[0]![0].data.representante).toEqual({
       create: expect.objectContaining({
         nombre: 'Laura',
-        fechaNacimiento: new Date('1991-07-30T00:00:00.000Z'),
+        edad: 35,
       }),
     });
   });
@@ -155,7 +158,7 @@ describe('HistoriaRepositorio', () => {
         nombre: 'José',
         apellido: null,
         cedula: null,
-        fechaNacimiento: null,
+        edad: null,
         estadoCivil: null,
         gradoInstruccion: null,
         ocupacion: null,
@@ -290,5 +293,25 @@ describe('HistoriaRepositorio', () => {
     historiaClinica.count.mockResolvedValueOnce(8).mockResolvedValueOnce(2);
 
     await expect(repositorio.contar('f1')).resolves.toEqual({ historias: 8, archivadas: 2 });
+  });
+});
+
+describe('HistoriaRepositorio: datos infantiles (v1.6 §8.4)', () => {
+  it('crea y reemplaza los datos infantiles junto con la historia', async () => {
+    const { repositorio, historiaClinica, datosInfantilesHistoria } = crearRepositorio();
+    const infantiles = { ...datosInfantilesVacios(), gestas: 2, vacunas: 'Completas' };
+
+    await repositorio.crear('f1', null, 'REHAB_INFANTIL', datosCarlos(), null, infantiles);
+    await repositorio.actualizar('f1', 'h1', datosCarlos(), null, [], infantiles);
+
+    expect(historiaClinica.create.mock.calls[0]![0].data.datosInfantiles).toEqual({
+      create: infantiles,
+    });
+    expect(datosInfantilesHistoria.deleteMany).toHaveBeenCalledWith({
+      where: { idHistoria: 'h1' },
+    });
+    expect(historiaClinica.update.mock.calls[0]![0].data.datosInfantiles).toEqual({
+      create: infantiles,
+    });
   });
 });

@@ -31,6 +31,45 @@ function obtenerCookie(respuesta: request.Response, nombre: string): string | un
   return linea?.split(';')[0]?.split('=').slice(1).join('=');
 }
 
+// v1.6 §8.4: antecedentes maternos, datos al nacer y exámenes (sin los opcionales).
+const INFANTILES_COMPLETOS = {
+  controlPrenatal: 'Sí',
+  controlPrenatalDesde: 'Semana 8',
+  gestas: 2,
+  formulaP: 1,
+  formulaF: 0,
+  formulaC: 1,
+  formulaA: 0,
+  infeccionesUrinarias: 'No',
+  hemorragias: 'No',
+  infeccionesVaginales: 'No',
+  enfermedadBase: 'Ninguna',
+  medicamentos: 'Ácido fólico',
+  consumoAlcohol: 'No',
+  consumoTabaco: 'No',
+  tipoSangre: 'O+',
+  edadGestacional: 38,
+  peso: '3,2 kg',
+  talla: '50 cm',
+  respiro: 'Sí',
+  lloro: 'Sí',
+  apgar: '9/10',
+  requirioO2: 'No',
+  fototerapia: 'No',
+  sdr: 'No',
+  sepsisNeonatal: 'No',
+  ictericia: 'No',
+  anemia: 'No',
+  vacunas: 'Completas',
+  alimentacion: 'LME',
+  pesquisaNeonatal: 'Normal',
+  emisionesOtoacusticas: 'Normal',
+  ecoCerebral: 'Normal',
+  ecoAbdominal: 'Normal',
+  evaluadoCardiologia: 'Sí',
+  evaluadoNeurologia: 'Sí',
+  evaluadoOftalmologia: 'Sí',
+};
 describe('Historias clínicas (e2e, PostgreSQL real)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
@@ -231,6 +270,23 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     );
   });
 
+  it('v1.6 RF-028: sin antecedentes maternos, datos al nacer ni exámenes no está lista', async () => {
+    const { crear } = await loginComo();
+
+    const respuesta = await crear({
+      tipo: 'REHAB_INFANTIL',
+      nombre: 'Lucía',
+      apellido: 'Pérez',
+      sinDocumento: true,
+      fechaNacimiento: '2023-05-02',
+      datosInfantiles: { gestas: 1 },
+    }).expect(201);
+
+    expect(respuesta.body.historia.camposFaltantes).toContain('infantil.controlPrenatal');
+    expect(respuesta.body.historia.camposFaltantes).not.toContain('infantil.gestas');
+    expect(respuesta.body.historia.camposFaltantes).not.toContain('infantil.transfusiones');
+  });
+
   it('RF-015: con el representante completo, la historia infantil queda lista para valorar', async () => {
     const { crear } = await loginComo();
 
@@ -248,12 +304,13 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
       dirComunidad: 'Centro',
       telefono: '04145556610',
       modalidad: 'DOMICILIO',
+      datosInfantiles: INFANTILES_COMPLETOS,
       representante: {
         parentesco: 'PADRE',
         nombre: 'José',
         apellido: 'Rivas',
         cedula: '12.345.678',
-        fechaNacimiento: '1988-01-20',
+        edad: 38,
         estadoCivil: 'Casado(a)',
         gradoInstruccion: 'Universitario',
         ocupacion: 'Ingeniero',
@@ -263,7 +320,11 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     expect(respuesta.body.historia.representante).toMatchObject({
       parentesco: 'PADRE',
       cedula: '12345678',
-      fechaNacimiento: '1988-01-20',
+      edad: 38,
+    });
+    expect(respuesta.body.historia.datosInfantiles).toMatchObject({
+      gestas: 2,
+      alimentacion: 'LME',
     });
     expect(respuesta.body.historia.camposFaltantes).toEqual([]);
     expect(respuesta.body.historia.puedeIniciarValoracion).toBe(true);

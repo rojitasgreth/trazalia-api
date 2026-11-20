@@ -1,5 +1,6 @@
 import type { TipoHistoria } from '../../../generado/prisma/enums.js';
 import type { DatosPersonalesDto } from '../dto/datos-personales.dto.js';
+import type { DatosInfantilesDto } from '../dto/datos-infantiles.dto.js';
 import type { RepresentanteDto } from '../dto/representante.dto.js';
 import { CAMPOS_PERSONALES, campoAplica, esTipoAdulto } from './campos-por-tipo.js';
 import {
@@ -8,6 +9,12 @@ import {
   type DatosPersonales,
   type DatosRepresentante,
 } from './datos-personales.js';
+import {
+  CAMPOS_ENTEROS_INFANTILES,
+  datosInfantilesVacios,
+  type CampoInfantil,
+  type DatosInfantiles,
+} from './datos-infantiles.js';
 
 /**
  * Lleva la entrada del formulario a la forma persistida para el tipo indicado:
@@ -73,10 +80,33 @@ export function normalizarRepresentante(
     nombre: textoONulo(entrada.nombre),
     apellido: textoONulo(entrada.apellido),
     cedula: normalizarCedula(entrada.cedula),
-    fechaNacimiento: entrada.fechaNacimiento ?? null,
+    edad: entrada.edad ?? null,
     estadoCivil: entrada.estadoCivil ?? null,
     gradoInstruccion: entrada.gradoInstruccion ?? null,
     ocupacion: textoONulo(entrada.ocupacion),
   };
   return Object.values(representante).some((valor) => valor !== null) ? representante : null;
+}
+
+/**
+ * SPEC B v1.6 §8.4: antecedentes maternos, datos al nacer y exámenes, solo en
+ * Rehabilitación infantil. Textos recortados (vacío = null); sin ningún dato
+ * equivale a no tenerlos (null).
+ */
+export function normalizarDatosInfantiles(
+  tipo: TipoHistoria,
+  entrada: DatosInfantilesDto | null | undefined,
+): DatosInfantiles | null {
+  if (tipo !== 'REHAB_INFANTIL' || !entrada) return null;
+  const datos = datosInfantilesVacios();
+  const enteros: readonly CampoInfantil[] = CAMPOS_ENTEROS_INFANTILES;
+  for (const campo of Object.keys(datos) as CampoInfantil[]) {
+    const valor = entrada[campo];
+    (datos as unknown as Record<CampoInfantil, unknown>)[campo] = enteros.includes(campo)
+      ? typeof valor === 'number'
+        ? valor
+        : null
+      : textoONulo(typeof valor === 'string' ? valor : null);
+  }
+  return Object.values(datos).some((valor) => valor !== null) ? datos : null;
 }

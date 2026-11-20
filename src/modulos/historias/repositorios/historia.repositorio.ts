@@ -7,9 +7,10 @@ import type {
   NacionalidadPaciente,
   TipoHistoria,
 } from '../../../generado/prisma/enums.js';
+import type { DatosInfantiles } from '../dominio/datos-infantiles.js';
 import type { DatosPersonales, DatosRepresentante } from '../dominio/datos-personales.js';
 
-const INCLUIR = { representante: true } as const;
+const INCLUIR = { representante: true, datosInfantiles: true } as const;
 
 export type HistoriaConRepresentante = Prisma.HistoriaClinicaGetPayload<{
   include: typeof INCLUIR;
@@ -60,7 +61,7 @@ export interface Propagacion {
 }
 
 export function aColumnasRepresentante(representante: DatosRepresentante) {
-  return { ...representante, fechaNacimiento: aFechaBd(representante.fechaNacimiento) };
+  return { ...representante };
 }
 
 // Todas las consultas reciben el id del fisioterapeuta autenticado y filtran
@@ -111,6 +112,7 @@ export class HistoriaRepositorio {
     tipo: TipoHistoria,
     datos: DatosPersonales,
     representante: DatosRepresentante | null = null,
+    infantiles: DatosInfantiles | null = null,
   ): Promise<HistoriaConRepresentante> {
     return this.prisma.$transaction(async (tx) => {
       const paciente =
@@ -124,6 +126,7 @@ export class HistoriaRepositorio {
           ...(representante
             ? { representante: { create: aColumnasRepresentante(representante) } }
             : {}),
+          ...(infantiles ? { datosInfantiles: { create: infantiles } } : {}),
         },
         include: INCLUIR,
       });
@@ -133,7 +136,8 @@ export class HistoriaRepositorio {
   /**
    * SPEC §10.2 (ADR-0002): actualiza la historia y propaga los cambios a otras
    * historias no archivadas del paciente en una sola transacción; si algo
-   * falla, no se modifica ninguna. El representante se reemplaza completo.
+   * falla, no se modifica ninguna. El representante y los datos infantiles se
+   * reemplazan completos.
    */
   async actualizar(
     idFisioterapeuta: string,
@@ -141,9 +145,11 @@ export class HistoriaRepositorio {
     datos: DatosPersonales,
     representante: DatosRepresentante | null,
     propagaciones: readonly Propagacion[],
+    infantiles: DatosInfantiles | null = null,
   ): Promise<HistoriaConRepresentante> {
     return this.prisma.$transaction(async (tx) => {
       await tx.representanteHistoria.deleteMany({ where: { idHistoria } });
+      await tx.datosInfantilesHistoria.deleteMany({ where: { idHistoria } });
       const historia = await tx.historiaClinica.update({
         where: { idHistoria, idFisioterapeuta, archivada: false },
         data: {
@@ -151,6 +157,7 @@ export class HistoriaRepositorio {
           ...(representante
             ? { representante: { create: aColumnasRepresentante(representante) } }
             : {}),
+          ...(infantiles ? { datosInfantiles: { create: infantiles } } : {}),
         },
         include: INCLUIR,
       });

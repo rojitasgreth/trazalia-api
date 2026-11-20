@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { esquemaDatosPersonales } from './datos-personales.dto.js';
+import { esquemaDatosInfantiles } from './datos-infantiles.dto.js';
 import { esquemaRepresentante } from './representante.dto.js';
 
 export const TIPOS_HISTORIA = [
@@ -15,6 +16,8 @@ export const esquemaCrearHistoria = esquemaDatosPersonales.extend({
   tipo: z.enum(TIPOS_HISTORIA),
   // Solo Rehabilitación infantil; en los demás tipos se ignora.
   representante: esquemaRepresentante.nullable().optional(),
+  // v1.6 §8.4: solo Rehabilitación infantil; en los demás tipos se ignora.
+  datosInfantiles: esquemaDatosInfantiles.nullable().optional(),
 });
 
 export type CrearHistoriaDto = z.infer<typeof esquemaCrearHistoria>;

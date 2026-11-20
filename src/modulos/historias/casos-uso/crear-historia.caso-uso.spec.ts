@@ -54,6 +54,7 @@ describe('CrearHistoriaCasoUso', () => {
       'TRAUMA_ADULTO',
       expect.objectContaining({ nombre: 'Carlos', cedula: '15482301' }),
       null,
+      null,
     );
     expect(historia.idHistoria).toBe('nueva');
     expect(auditoria.registrar).toHaveBeenCalledWith({
@@ -106,6 +107,7 @@ describe('CrearHistoriaCasoUso', () => {
       'p-carlos',
       'TRAUMA_ADULTO',
       expect.anything(),
+      null,
       null,
     );
   });
@@ -186,7 +188,28 @@ describe('CrearHistoriaCasoUso', () => {
       'REHAB_INFANTIL',
       expect.objectContaining({ sinDocumento: true }),
       expect.objectContaining({ parentesco: 'MADRE', nombre: 'Laura', cedula: '18220417' }),
+      null,
     );
+  });
+
+  it('v1.6 §8.4: guarda los datos infantiles normalizados; en adultos los ignora', async () => {
+    const { casoUso, historias } = crearCasoUso();
+
+    await casoUso.ejecutar('f1', {
+      tipo: 'REHAB_INFANTIL',
+      nombre: 'Sofía',
+      apellido: 'Martínez',
+      sinDocumento: true,
+      fechaNacimiento: '2022-06-10',
+      datosInfantiles: { gestas: 2, vacunas: ' Completas ' },
+    });
+    await casoUso.ejecutar('f1', { ...COMANDO, datosInfantiles: { gestas: 2 } });
+
+    expect(vi.mocked(historias.crear).mock.calls[0]![5]).toMatchObject({
+      gestas: 2,
+      vacunas: 'Completas',
+    });
+    expect(vi.mocked(historias.crear).mock.calls[1]![5]).toBeNull();
   });
 
   it('ignora el representante en los tipos de adulto', async () => {

@@ -1,3 +1,10 @@
+import {
+  CAMPOS_ENTEROS_INFANTILES,
+  CAMPOS_INFANTILES,
+  CAMPOS_INFANTILES_OPCIONALES,
+  datosInfantilesVacios,
+  type DatosInfantiles,
+} from '../dominio/datos-infantiles.js';
 // Datos de prueba compartidos por las pruebas unitarias del módulo.
 import type { CentrosServicio } from '../../centros/centros.servicio.js';
 import type { CentroPublico } from '../../centros/vista/centro-publico.js';
@@ -55,6 +62,7 @@ export function filaHistoria(
     fechaCreacion: new Date('2026-11-16T12:00:00.000Z'),
     fechaActualizacion: new Date('2026-11-16T12:00:00.000Z'),
     representante: null,
+    datosInfantiles: null,
     ...cambios,
   };
 }
@@ -77,4 +85,20 @@ export function centrosFalsos(centros: CentroPublico[] = [CENTRO]): CentrosServi
       ),
     ),
   } as unknown as CentrosServicio;
+}
+
+/** v1.6 §8.4: antecedentes maternos, datos al nacer y exámenes completos (sin los opcionales). */
+export function infantilesCompletos(cambios: Partial<DatosInfantiles> = {}): DatosInfantiles {
+  const datos = datosInfantilesVacios();
+  for (const campo of CAMPOS_INFANTILES) {
+    if (CAMPOS_INFANTILES_OPCIONALES.includes(campo)) continue;
+    (datos as unknown as Record<string, unknown>)[campo] = (
+      CAMPOS_ENTEROS_INFANTILES as readonly string[]
+    ).includes(campo)
+      ? 1
+      : 'Sí';
+  }
+  datos.edadGestacional = 38;
+  datos.alimentacion = 'LME';
+  return { ...datos, ...cambios };
 }

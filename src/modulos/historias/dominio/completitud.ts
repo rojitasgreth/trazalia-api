@@ -5,6 +5,11 @@ import {
   type DatosPersonales,
   type DatosRepresentante,
 } from './datos-personales.js';
+import {
+  CAMPOS_INFANTILES,
+  CAMPOS_INFANTILES_OPCIONALES,
+  type DatosInfantiles,
+} from './datos-infantiles.js';
 
 function vacio(valor: unknown): boolean {
   return (
@@ -24,6 +29,7 @@ export function calcularCamposFaltantes(
   tipo: TipoHistoria,
   datos: DatosPersonales,
   representante: DatosRepresentante | null,
+  infantiles: DatosInfantiles | null = null,
 ): string[] {
   const faltantes: string[] = [];
 
@@ -43,6 +49,13 @@ export function calcularCamposFaltantes(
     for (const campo of CAMPOS_REPRESENTANTE) {
       if (!representante || vacio(representante[campo])) {
         faltantes.push(`representante.${campo}`);
+      }
+    }
+    // v1.6 RF-028: antecedentes maternos, datos al nacer y exámenes, salvo los
+    // opcionales de la ficha.
+    for (const campo of CAMPOS_INFANTILES) {
+      if (!CAMPOS_INFANTILES_OPCIONALES.includes(campo) && vacio(infantiles?.[campo])) {
+        faltantes.push(`infantil.${campo}`);
       }
     }
   }

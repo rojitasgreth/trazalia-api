@@ -42,7 +42,8 @@ export interface DatosRepresentante {
   nombre: string | null;
   apellido: string | null;
   cedula: string | null;
-  fechaNacimiento: string | null;
+  /** v1.6: la ficha pide la edad, en años. */
+  edad: number | null;
   estadoCivil: string | null;
   gradoInstruccion: string | null;
   ocupacion: string | null;
@@ -53,7 +54,7 @@ export const CAMPOS_REPRESENTANTE = [
   'nombre',
   'apellido',
   'cedula',
-  'fechaNacimiento',
+  'edad',
   'estadoCivil',
   'gradoInstruccion',
   'ocupacion',

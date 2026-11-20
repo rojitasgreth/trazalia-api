@@ -275,8 +275,9 @@ model HistoriaClinica {
   fechaCreacion      DateTime              @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime              @updatedAt @map("fecha_actualizacion")
 
-  paciente      Paciente               @relation(fields: [idPaciente, idFisioterapeuta], references: [idPaciente, idFisioterapeuta])
-  representante RepresentanteHistoria?
+  paciente        Paciente                 @relation(fields: [idPaciente, idFisioterapeuta], references: [idPaciente, idFisioterapeuta])
+  representante   RepresentanteHistoria?
+  datosInfantiles DatosInfantilesHistoria?
 
   @@unique([idPaciente, tipo])
   @@index([idFisioterapeuta, archivada, fechaActualizacion])
@@ -292,7 +293,8 @@ model RepresentanteHistoria {
   nombre           String?
   apellido         String?
   cedula           String?
-  fechaNacimiento  DateTime?                @map("fecha_nacimiento") @db.Date
+  // v1.6: la ficha pide la edad (años), no la fecha de nacimiento.
+  edad             Int?
   estadoCivil      String?                  @map("estado_civil")
   gradoInstruccion String?                  @map("grado_instruccion")
   ocupacion        String?
@@ -300,6 +302,60 @@ model RepresentanteHistoria {
   historia HistoriaClinica @relation(fields: [idHistoria], references: [idHistoria], onDelete: Cascade)
 
   @@map("representantes_historia")
+  @@schema("historias")
+}
+
+// SPEC B v1.6 §8.4: antecedentes maternos, datos al nacer y exámenes realizados
+// de la ficha infantil (datos personales, uno por historia infantil).
+model DatosInfantilesHistoria {
+  idHistoria             String  @id @map("id_historia")
+  controlPrenatal        String? @map("control_prenatal")
+  controlPrenatalDesde   String? @map("control_prenatal_desde")
+  gestas                 Int?
+  formulaP               Int?    @map("formula_p")
+  formulaF               Int?    @map("formula_f")
+  formulaC               Int?    @map("formula_c")
+  formulaA               Int?    @map("formula_a")
+  infeccionesUrinarias   String? @map("infecciones_urinarias")
+  hemorragias            String?
+  infeccionesVaginales   String? @map("infecciones_vaginales")
+  embarazoOtras          String? @map("embarazo_otras")
+  enfermedadBase         String? @map("enfermedad_base")
+  medicamentos           String?
+  consumoAlcohol         String? @map("consumo_alcohol")
+  consumoTabaco          String? @map("consumo_tabaco")
+  consumoOtros           String? @map("consumo_otros")
+  tipoSangre             String? @map("tipo_sangre")
+  complicacionesMaternas String? @map("complicaciones_maternas")
+  edadGestacional        Int?    @map("edad_gestacional")
+  edadCronologica        String? @map("edad_cronologica")
+  edadCorregida          String? @map("edad_corregida")
+  peso                   String?
+  talla                  String?
+  respiro                String?
+  lloro                  String?
+  apgar                  String?
+  requirioO2             String? @map("requirio_o2")
+  fototerapia            String?
+  transfusiones          String?
+  sdr                    String?
+  sepsisNeonatal         String? @map("sepsis_neonatal")
+  ictericia              String?
+  anemia                 String?
+  neonatalOtros          String? @map("neonatal_otros")
+  vacunas                String?
+  alimentacion           String?
+  pesquisaNeonatal       String? @map("pesquisa_neonatal")
+  emisionesOtoacusticas  String? @map("emisiones_otoacusticas")
+  ecoCerebral            String? @map("eco_cerebral")
+  ecoAbdominal           String? @map("eco_abdominal")
+  evaluadoCardiologia    String? @map("evaluado_cardiologia")
+  evaluadoNeurologia     String? @map("evaluado_neurologia")
+  evaluadoOftalmologia   String? @map("evaluado_oftalmologia")
+
+  historia HistoriaClinica @relation(fields: [idHistoria], references: [idHistoria], onDelete: Cascade)
+
+  @@map("datos_infantiles")
   @@schema("historias")
 }
 
