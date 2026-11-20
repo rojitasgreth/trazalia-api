@@ -5,7 +5,7 @@ describe('propagación de datos personales (SPEC §10.2, ADR-0002)', () => {
   it('detecta solo los campos compartidos que cambiaron', () => {
     const antes = datosCarlos();
     const despues = datosCarlos({
-      telefono: '0424-555-8890',
+      telefono: '04245558890',
       demandasFisicas: 'Otra cosa',
       fuenteInformacion: ['Paciente'],
     });
@@ -15,14 +15,14 @@ describe('propagación de datos personales (SPEC §10.2, ADR-0002)', () => {
   });
 
   it('a otra historia solo llegan los campos que existen en su ficha', () => {
-    const datos = datosCarlos({ telefono: '0424-555-8890', dirEstado: 'Miranda' });
+    const datos = datosCarlos({ telefono: '04245558890', dirEstado: 'Miranda' });
 
     expect(
       cambiosParaOtraHistoria(['telefono', 'dirEstado', 'nombre'], datos, {
         tipo: 'NEURO_ADULTO',
         sinDocumento: false,
       }),
-    ).toEqual({ telefono: '0424-555-8890', nombre: 'Carlos' });
+    ).toEqual({ telefono: '04245558890', nombre: 'Carlos' });
     expect(
       cambiosParaOtraHistoria(['dirEstado'], datos, { tipo: 'ADULTO_MAYOR', sinDocumento: false }),
     ).toEqual({ dirEstado: 'Miranda' });

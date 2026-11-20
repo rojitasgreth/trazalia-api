@@ -21,7 +21,7 @@ const CARLOS = {
   cedula: '15.482.301',
   fechaNacimiento: '1985-03-14',
   sexo: 'MASCULINO',
-  telefono: '0412-555-0134',
+  telefono: '04125550134',
 };
 
 function obtenerCookie(respuesta: request.Response, nombre: string): string | undefined {
@@ -217,7 +217,7 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
       dirMunicipio: 'Sucre',
       dirParroquia: 'Petare',
       dirComunidad: 'Sector 3',
-      telefono: '0424-555-1190',
+      telefono: '04245551190',
     }).expect(201);
 
     expect(respuesta.body.historia).toMatchObject({
@@ -246,7 +246,7 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
       dirMunicipio: 'Iribarren',
       dirParroquia: 'Catedral',
       dirComunidad: 'Centro',
-      telefono: '0414-555-6610',
+      telefono: '04145556610',
       modalidad: 'DOMICILIO',
       representante: {
         parentesco: 'PADRE',
@@ -323,17 +323,17 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
       agente.patch(`${RUTA}/${trauma.idHistoria}`).set('X-XSRF-TOKEN', csrf).send(cuerpo);
 
     // Solo esta historia.
-    const soloEsta = await editar({ ...CARLOS, telefono: '0424-555-1111' }).expect(200);
-    expect(soloEsta.body.historia.telefono).toBe('0424-555-1111');
+    const soloEsta = await editar({ ...CARLOS, telefono: '04245551111' }).expect(200);
+    expect(soloEsta.body.historia.telefono).toBe('04245551111');
     const neuroIntacta = await prisma.historiaClinica.findUniqueOrThrow({
       where: { idHistoria: neuro.idHistoria },
     });
-    expect(neuroIntacta.telefono).toBe('0412-555-0134');
+    expect(neuroIntacta.telefono).toBe('04125550134');
 
     // También las demás: la archivada no cambia.
     await editar({
       ...CARLOS,
-      telefono: '0424-555-8890',
+      telefono: '04245558890',
       demandasFisicas: 'Oficina',
       propagar: true,
     }).expect(200);
@@ -341,9 +341,9 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
       prisma.historiaClinica.findUniqueOrThrow({ where: { idHistoria: neuro.idHistoria } }),
       prisma.historiaClinica.findUniqueOrThrow({ where: { idHistoria: mayor.idHistoria } }),
     ]);
-    expect(neuroDespues.telefono).toBe('0424-555-8890');
+    expect(neuroDespues.telefono).toBe('04245558890');
     expect(neuroDespues.demandasFisicas).toBeNull();
-    expect(mayorDespues.telefono).toBe('0412-555-0134');
+    expect(mayorDespues.telefono).toBe('04125550134');
 
     const auditoria = await prisma.eventoAuditoria.findFirst({
       where: { tipoEvento: 'actualizacion_historia' },

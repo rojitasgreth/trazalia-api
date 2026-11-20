@@ -8,14 +8,14 @@ describe('normalizarDatosPersonales', () => {
       nacionalidad: 'V',
       cedula: '15.482.301',
       ocupacion: '   ',
-      telefono: ' 0412-555-0134 ',
+      telefono: ' 04125550134 ',
     });
 
     expect(datos).toMatchObject({
       nombre: 'Carlos',
       cedula: '15482301',
       ocupacion: null,
-      telefono: '0412-555-0134',
+      telefono: '04125550134',
       fuenteInformacion: [],
     });
   });

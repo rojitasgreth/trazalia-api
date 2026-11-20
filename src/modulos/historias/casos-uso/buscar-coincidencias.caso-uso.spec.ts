@@ -51,7 +51,7 @@ describe('BuscarCoincidenciasCasoUso', () => {
     expect(resultado).toMatchObject({
       resultado: 'autocompletar',
       historia: { idHistoria: 'trauma', tipo: 'TRAUMA_ADULTO' },
-      datos: { nombre: 'Carlos', telefono: '0412-555-0134', demandasFisicas: null },
+      datos: { nombre: 'Carlos', telefono: '04125550134', demandasFisicas: null },
     });
   });
 

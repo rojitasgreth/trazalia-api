@@ -9,7 +9,11 @@ export const esquemaCrearUsuario = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio.'),
   apellido: z.string().trim().min(1, 'El apellido es obligatorio.'),
   correo: z.email('El correo no tiene un formato válido.'),
-  telefono: z.string().trim().min(1).optional(),
+  telefono: z
+    .string()
+    .trim()
+    .regex(/^\d{1,11}$/, 'El teléfono solo admite dígitos, máximo 11.')
+    .optional(),
   rol: z.enum(['ADMINISTRADOR', 'FISIOTERAPEUTA']),
 });
 
