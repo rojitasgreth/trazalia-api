@@ -41,6 +41,24 @@ describe('validarContenido (SPEC C §7, ADR-0005)', () => {
     ]);
   });
 
+  it.each(['TRAUMA_ADULTO', 'NEURO_ADULTO', 'REHAB_INFANTIL', 'ADULTO_MAYOR'] as const)(
+    '%s: los textos largos admiten hasta 1000 caracteres',
+    (tipo) => {
+      const ficha = fichaDe(tipo);
+      const areas = ficha.secciones
+        .flatMap((s) => s.bloques)
+        .flatMap((b) => (b.k === 'campos' ? b.campos : []))
+        .filter((c) => c.k === 'area');
+      expect(areas.length).toBeGreaterThan(0);
+      for (const { id } of areas) {
+        expect(validarContenido(ficha, { [id]: 'a'.repeat(1000) }).errores).toEqual([]);
+        expect(validarContenido(ficha, { [id]: 'a'.repeat(1001) }).errores).toEqual([
+          { clave: id, mensaje: 'Máximo 1000 caracteres.' },
+        ]);
+      }
+    },
+  );
+
   it('los campos numéricos aceptan decimales sin cero inicial y rechazan las unidades', () => {
     for (const valor of ['85', '85,5', '.5', ',5']) {
       expect(validarContenido(neuro, { 's13.barthel': valor }).errores).toEqual([]);

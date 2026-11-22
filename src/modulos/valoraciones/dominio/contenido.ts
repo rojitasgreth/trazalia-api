@@ -24,7 +24,7 @@ interface Esquema {
 }
 
 const CORTO = 500;
-const LARGO = 4000;
+const LARGO = 1000;
 const NUMERO = /^-?(\d+([.,]\d+)?|[.,]\d+)$/;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
