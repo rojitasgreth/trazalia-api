@@ -41,6 +41,17 @@ describe('validarContenido (SPEC C §7, ADR-0005)', () => {
     ]);
   });
 
+  it('los campos numéricos aceptan decimales sin cero inicial y rechazan las unidades', () => {
+    for (const valor of ['85', '85,5', '.5', ',5']) {
+      expect(validarContenido(neuro, { 's13.barthel': valor }).errores).toEqual([]);
+    }
+    for (const valor of ['85/100', '1,2 m/s', 'No aplica', '.']) {
+      expect(validarContenido(neuro, { 's13.barthel': valor }).errores).toEqual([
+        { clave: 's13.barthel', mensaje: 'Debe ser un número.' },
+      ]);
+    }
+  });
+
   it('acepta los valores de la ficha, incluido el IMC con coma decimal y el texto libre de Inspección', () => {
     const { contenido, errores } = validarContenido(trauma, {
       's2.mecanismo': ['Torsión', 'Deportivo', 'Torsión'],
