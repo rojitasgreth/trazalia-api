@@ -102,11 +102,15 @@ export function normalizarDatosInfantiles(
   const enteros: readonly CampoInfantil[] = CAMPOS_ENTEROS_INFANTILES;
   for (const campo of Object.keys(datos) as CampoInfantil[]) {
     const valor = entrada[campo];
+    const texto = textoONulo(typeof valor === 'string' ? valor : null);
     (datos as unknown as Record<CampoInfantil, unknown>)[campo] = enteros.includes(campo)
       ? typeof valor === 'number'
         ? valor
         : null
-      : textoONulo(typeof valor === 'string' ? valor : null);
+      : // Peso y talla se guardan con coma decimal, como se muestran.
+        campo === 'peso' || campo === 'talla'
+        ? (texto?.replace('.', ',') ?? null)
+        : texto;
   }
   return Object.values(datos).some((valor) => valor !== null) ? datos : null;
 }

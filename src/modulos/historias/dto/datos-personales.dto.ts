@@ -22,11 +22,24 @@ const fechaPasada = z.iso.date().refine((fecha) => fecha <= new Date().toISOStri
 // porque la normalización lo convierte en null.
 const TELEFONO = /^\s*\d{0,11}\s*$/;
 
+/**
+ * Cédula: solo números, hasta 9 dígitos. Se admiten los puntos de miles
+ * ("15.482.301"), que la normalización quita.
+ */
+export const esquemaCedula = z
+  .string()
+  .regex(/^[\d.\s]*$/, 'La cédula solo admite números.')
+  .refine((valor) => valor.replace(/\D/g, '').length <= 9, {
+    message: 'La cédula tiene como máximo 9 dígitos.',
+  })
+  .nullable()
+  .optional();
+
 export const esquemaDatosPersonales = z.object({
   nombre: z.string().max(100),
   apellido: z.string().max(100),
   nacionalidad: z.enum(['V', 'E']).nullable().optional(),
-  cedula: texto(15),
+  cedula: esquemaCedula,
   sinDocumento: z.boolean().optional(),
   fechaNacimiento: fechaPasada.nullable().optional(),
   sexo: z.enum(['FEMENINO', 'MASCULINO']).nullable().optional(),

@@ -49,8 +49,8 @@ const INFANTILES_COMPLETOS = {
   consumoTabaco: 'No',
   tipoSangre: 'O+',
   edadGestacional: 38,
-  peso: '3,2 kg',
-  talla: '50 cm',
+  peso: '3.2',
+  talla: '50',
   respiro: 'Sí',
   lloro: 'Sí',
   apgar: '9/10',
@@ -325,6 +325,10 @@ describe('Historias clínicas (e2e, PostgreSQL real)', () => {
     expect(respuesta.body.historia.datosInfantiles).toMatchObject({
       gestas: 2,
       alimentacion: 'LME',
+      tipoSangre: 'O+',
+      respiro: 'Sí',
+      // El punto decimal se guarda como coma, como se muestra.
+      peso: '3,2',
     });
     expect(respuesta.body.historia.camposFaltantes).toEqual([]);
     expect(respuesta.body.historia.puedeIniciarValoracion).toBe(true);
