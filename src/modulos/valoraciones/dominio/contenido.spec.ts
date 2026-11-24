@@ -1,3 +1,4 @@
+import { formatoDeUnidad } from '../fichas/dsl.js';
 import { fichaDe } from '../fichas/index.js';
 import { contenidoInicial, validarContenido } from './contenido.js';
 import type { DatosDeLaFicha } from './datos-de-la-ficha.js';
@@ -60,15 +61,63 @@ describe('validarContenido (SPEC C §7, ADR-0005)', () => {
   );
 
   it('los campos numéricos aceptan decimales sin cero inicial y rechazan las unidades', () => {
-    for (const valor of ['85', '85,5', '.5', ',5']) {
-      expect(validarContenido(neuro, { 's13.barthel': valor }).errores).toEqual([]);
+    for (const valor of ['1', '0,8', '.5', ',5']) {
+      expect(validarContenido(neuro, { 's11.10mwt': valor }).errores).toEqual([]);
     }
     for (const valor of ['85/100', '1,2 m/s', 'No aplica', '.']) {
-      expect(validarContenido(neuro, { 's13.barthel': valor }).errores).toEqual([
-        { clave: 's13.barthel', mensaje: 'Debe ser un número.' },
+      expect(validarContenido(neuro, { 's11.10mwt': valor }).errores).toEqual([
+        { clave: 's11.10mwt', mensaje: 'Debe ser un número.' },
       ]);
     }
   });
+
+  it('decisión del 24-11-2026: la unidad fija el formato y el rango del valor', () => {
+    const error = (ficha: typeof trauma, clave: string, valor: string) =>
+      validarContenido(ficha, { [clave]: valor }).errores[0]?.mensaje ?? null;
+
+    // "/100" y "/10": enteros de 0 al máximo, también en grupos y celdas.
+    expect(error(neuro, 's13.barthel', '85')).toBeNull();
+    expect(error(neuro, 's13.barthel', '85,5')).toBe('Debe ser un número entero.');
+    expect(error(neuro, 's13.barthel', '101')).toBe('Debe estar entre 0 y 100.');
+    expect(error(trauma, 's3.dolor_nrs_0_10.actual', '10')).toBeNull();
+    expect(error(trauma, 's3.dolor_nrs_0_10.actual', '11')).toBe('Debe estar entre 0 y 10.');
+    // Filas de signos vitales: la unidad va en el nombre de la fila.
+    const vitales = 's5.signos_vitales_y_antropometria';
+    expect(error(trauma, `${vitales}.f1.c2`, '120/80')).toBeNull();
+    expect(error(trauma, `${vitales}.f1.c2`, '12080')).toBe('Escribe la presión como 120/80.');
+    expect(error(trauma, `${vitales}.f2.c2`, '400')).toBe('Debe estar entre 20 y 300.');
+    expect(error(trauma, `${vitales}.f5.c2`, '36,5')).toBeNull();
+    expect(error(trauma, `${vitales}.f6.c2.p1`, '78,5')).toBeNull();
+    expect(error(trauma, `${vitales}.f6.c2.p1`, '0,1')).toBe('Debe estar entre 0,3 y 400.');
+  });
+
+  it.each(['TRAUMA_ADULTO', 'NEURO_ADULTO', 'REHAB_INFANTIL', 'ADULTO_MAYOR'] as const)(
+    '%s: todo campo con una unidad conocida tiene formato',
+    (tipo) => {
+      const ficha = fichaDe(tipo);
+      const sinFormato: string[] = [];
+      for (const bloque of ficha.secciones.flatMap((s) => s.bloques)) {
+        if (bloque.k === 'campos') {
+          for (const c of bloque.campos) {
+            if (c.k === 'numero' && formatoDeUnidad(c.unidad) && !c.formato) sinFormato.push(c.id);
+            if (c.k === 'grupo') {
+              for (const p of c.partes) {
+                if (formatoDeUnidad(p.unidad) && !p.formato) sinFormato.push(`${c.id}.${p.id}`);
+              }
+            }
+          }
+        }
+        if (bloque.k === 'tabla') {
+          for (const celda of bloque.filas.flat()) {
+            if (celda.k === 'texto' && formatoDeUnidad(celda.unidad) && !celda.formato) {
+              sinFormato.push(celda.id);
+            }
+          }
+        }
+      }
+      expect(sinFormato).toEqual([]);
+    },
+  );
 
   it('acepta los valores de la ficha, incluido el IMC con coma decimal y el texto libre de Inspección', () => {
     const { contenido, errores } = validarContenido(trauma, {

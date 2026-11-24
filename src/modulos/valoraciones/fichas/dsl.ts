@@ -29,12 +29,57 @@ export type FuenteDato =
 /** Se asigna al iniciar la valoración y no se edita (RF-C03). */
 export type Automatico = 'fisioterapeuta' | 'fechaHora' | 'fecha';
 
+/**
+ * Cómo se escribe un valor numérico. Los rangos solo frenan errores de tipeo,
+ * no valores clínicos raros (decisión del 24-11-2026).
+ */
+export type Formato =
+  | { k: 'entero'; min: number; max: number }
+  | { k: 'decimal'; min: number; max: number }
+  /** Sistólica/diastólica, como "120/80". */
+  | { k: 'presion' };
+
+const entero = (min: number, max: number): Formato => ({ k: 'entero', min, max });
+const decimal = (min: number, max: number): Formato => ({ k: 'decimal', min, max });
+
+/** El formato que implica la unidad que la ficha pone junto al campo. */
+export function formatoDeUnidad(unidad: string | undefined): Formato | undefined {
+  if (!unidad) return undefined;
+  const fraccion = /^\/(\d+)$/.exec(unidad);
+  if (fraccion) return entero(0, Number(fraccion[1]));
+  return {
+    '%': entero(0, 100),
+    '°': entero(-180, 360),
+    '°C': decimal(25, 45),
+    lpm: entero(20, 300),
+    rpm: entero(4, 80),
+    mmHg: entero(20, 300),
+    kg: decimal(0.3, 400),
+    cm: decimal(20, 250),
+    s: decimal(0, 3600),
+    seg: decimal(0, 3600),
+    m: decimal(0, 5000),
+    'm/s': decimal(0, 10),
+  }[unidad];
+}
+
+/** Filas de signos vitales cuya unidad va en el nombre de la fila ("FC lpm", "PA"). */
+function formatoDeFila(etiqueta: string): Formato | undefined {
+  if (/^PA\b/.test(etiqueta)) return { k: 'presion' };
+  if (/^FC\b/.test(etiqueta)) return formatoDeUnidad('lpm');
+  if (/^FR\b/.test(etiqueta)) return formatoDeUnidad('rpm');
+  if (/^SpO₂/.test(etiqueta)) return formatoDeUnidad('%');
+  if (/^Temp\b/.test(etiqueta)) return formatoDeUnidad('°C');
+  return undefined;
+}
+
 export interface Parte {
   id: string;
   etiqueta: string;
   unidad?: string;
   tipo?: 'fecha' | 'hora';
   ancho?: number;
+  formato?: Formato;
 }
 
 export type Campo =
@@ -47,7 +92,7 @@ export type Campo =
       predeterminado?: FuenteDato;
     }
   | { id: string; k: 'area'; etiqueta: string; placeholder?: string }
-  | { id: string; k: 'numero'; etiqueta: string; unidad: string }
+  | { id: string; k: 'numero'; etiqueta: string; unidad: string; formato?: Formato }
   | { id: string; k: 'fecha'; etiqueta: string }
   | { id: string; k: 'unica'; etiqueta: string; opciones: string[]; completo?: boolean }
   | { id: string; k: 'multiple'; etiqueta: string; opciones: string[]; otroLibre?: boolean }
@@ -66,6 +111,7 @@ export type Celda =
       placeholder?: string;
       tipo?: 'fecha';
       habilitadaPor?: string;
+      formato?: Formato;
     }
   | { k: 'unica'; id: string; opciones: string[] }
   | { k: 'partes'; id: string; partes: Parte[]; habilitadaPor?: string }
@@ -142,9 +188,9 @@ type CampoPlantilla = SinId<Campo>;
 type CeldaPlantilla =
   | string
   | { t: string; destacado?: boolean }
-  | { i: 1; u?: string; ph?: string; tipo?: 'fecha'; habilitadaPor?: number }
+  | { i: 1; u?: string; ph?: string; tipo?: 'fecha'; habilitadaPor?: number; f?: Formato }
   | { r: string[] }
-  | { m: { l: string; u?: string; calc?: boolean }[]; habilitadaPor?: number }
+  | { m: { l: string; u?: string; calc?: boolean; f?: Formato }[]; habilitadaPor?: number }
   | { ck: 1; etiqueta: string }
   | { flag: string; t: string };
 
@@ -158,11 +204,10 @@ export const T = (
   ...(o.completo ? { completo: true } : {}),
   ...(o.predeterminado ? { predeterminado: o.predeterminado } : {}),
 });
-export const N = (etiqueta: string, unidad: string): CampoPlantilla => ({
-  k: 'numero',
-  etiqueta,
-  unidad,
-});
+export const N = (etiqueta: string, unidad: string): CampoPlantilla => {
+  const formato = formatoDeUnidad(unidad);
+  return { k: 'numero', etiqueta, unidad, ...(formato ? { formato } : {}) };
+};
 export const D = (etiqueta: string): CampoPlantilla => ({ k: 'fecha', etiqueta });
 export const A = (etiqueta: string, o: { ph?: string } = {}): CampoPlantilla => ({
   k: 'area',
@@ -191,18 +236,25 @@ export const K = (
 });
 export const G = (
   etiqueta: string,
-  partes: { l: string; u?: string; tipo?: 'fecha' | 'hora'; w?: number }[],
+  partes: { l: string; u?: string; tipo?: 'fecha' | 'hora'; w?: number; f?: Formato }[],
 ): CampoPlantilla => ({
   k: 'grupo',
   etiqueta,
-  partes: partes.map((p) => ({
-    id: slug(p.l),
-    etiqueta: p.l,
-    ...(p.u ? { unidad: p.u } : {}),
-    ...(p.tipo ? { tipo: p.tipo } : {}),
-    ...(p.w ? { ancho: p.w } : {}),
-  })),
+  partes: partes.map((p) => {
+    const formato = p.f ?? formatoDeUnidad(p.u);
+    return {
+      id: slug(p.l),
+      etiqueta: p.l,
+      ...(p.u ? { unidad: p.u } : {}),
+      ...(p.tipo ? { tipo: p.tipo } : {}),
+      ...(p.w ? { ancho: p.w } : {}),
+      ...(formato ? { formato } : {}),
+    };
+  }),
 });
+
+/** Formatos explícitos para los campos cuya unidad no lo dice. */
+export const FORMATOS = { entero, decimal };
 export const I = (etiqueta: string, fuente: FuenteDato): CampoPlantilla => ({
   k: 'info',
   etiqueta,
@@ -270,7 +322,12 @@ function unico(id: string, usados: Set<string>): string {
   return candidato;
 }
 
-function armarCelda(c: CeldaPlantilla, base: string, idsDeFila: string[]): Celda {
+function armarCelda(
+  c: CeldaPlantilla,
+  base: string,
+  idsDeFila: string[],
+  formatoFila: Formato | undefined,
+): Celda {
   if (typeof c === 'string') return c === '—' ? { k: 'na' } : { k: 'fijo', texto: c };
   if ('t' in c && !('flag' in c))
     return { k: 'fijo', texto: c.t, ...(c.destacado ? { destacado: true } : {}) };
@@ -281,14 +338,19 @@ function armarCelda(c: CeldaPlantilla, base: string, idsDeFila: string[]): Celda
     return {
       k: 'partes',
       id: base,
-      partes: c.m.map((p, n) => ({
-        id: p.calc ? 'imc' : `p${n + 1}`,
-        etiqueta: p.l,
-        ...(p.u ? { unidad: p.u } : {}),
-      })),
+      partes: c.m.map((p, n) => {
+        const formato = p.f ?? formatoDeUnidad(p.u);
+        return {
+          id: p.calc ? 'imc' : `p${n + 1}`,
+          etiqueta: p.l,
+          ...(p.u ? { unidad: p.u } : {}),
+          ...(formato ? { formato } : {}),
+        };
+      }),
       ...(c.habilitadaPor !== undefined ? { habilitadaPor: idsDeFila[c.habilitadaPor]! } : {}),
     };
   }
+  const formato = c.tipo ? undefined : (c.f ?? formatoDeUnidad(c.u) ?? formatoFila);
   return {
     k: 'texto',
     id: base,
@@ -296,6 +358,7 @@ function armarCelda(c: CeldaPlantilla, base: string, idsDeFila: string[]): Celda
     ...(c.ph ? { placeholder: c.ph } : {}),
     ...(c.tipo ? { tipo: c.tipo } : {}),
     ...(c.habilitadaPor !== undefined ? { habilitadaPor: idsDeFila[c.habilitadaPor]! } : {}),
+    ...(formato ? { formato } : {}),
   };
 }
 
@@ -330,7 +393,8 @@ export function S(
           columnas: b.columnas,
           filas: b.filas.map((fila, f) => {
             const ids = fila.map((_, c) => `${id}.f${f + 1}.c${c + 1}`);
-            return fila.map((celda, c) => armarCelda(celda, ids[c]!, ids));
+            const formatoFila = typeof fila[0] === 'string' ? formatoDeFila(fila[0]) : undefined;
+            return fila.map((celda, c) => armarCelda(celda, ids[c]!, ids, formatoFila));
           }),
         };
       }

@@ -1,4 +1,4 @@
-import { A, AU, D, F, G, I, IMC, K, N, NOTE, R, S, SUB, T, type Ficha } from './dsl.js';
+import { A, AU, D, F, FORMATOS, G, I, IMC, K, N, NOTE, R, S, SUB, T, type Ficha } from './dsl.js';
 
 // SPEC C §8.4 — ficha-viejos.docx, desde Datos de la evaluación hasta
 // Consentimiento informado. "Alérgicos" figura dos veces en la ficha y se
@@ -63,8 +63,8 @@ export const FICHA_ADULTO_MAYOR_V1: Ficha = {
           N('Estatura', 'cm'),
           N('Frecuencia cardíaca', 'lpm'),
           G('Presión arterial', [
-            { l: 'Sistólica', u: '/' },
-            { l: 'Diastólica', u: 'mmHg' },
+            { l: 'Sistólica', u: '/', f: FORMATOS.entero(40, 300) },
+            { l: 'Diastólica', u: 'mmHg', f: FORMATOS.entero(20, 200) },
           ]),
           N('Frecuencia respiratoria', 'rpm'),
           N('SatO₂', '%'),

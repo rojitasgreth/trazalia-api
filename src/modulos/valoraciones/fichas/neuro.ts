@@ -1,4 +1,23 @@
-import { A, AU, blank, D, F, G, I, IN, K, N, NOTE, R, S, SUB, T, TB, type Ficha } from './dsl.js';
+import {
+  A,
+  AU,
+  blank,
+  D,
+  F,
+  FORMATOS,
+  G,
+  I,
+  IN,
+  K,
+  N,
+  NOTE,
+  R,
+  S,
+  SUB,
+  T,
+  TB,
+  type Ficha,
+} from './dsl.js';
 
 // SPEC C §8.2 y §8.2.1 — neurologica-adultos.docx, secciones 1 a 18 y
 // consentimiento. Transcrito del prototipo (defs.neuro y SCALES).
@@ -156,7 +175,10 @@ export const FICHA_NEURO_V1: Ficha = {
           K('Deglución/nutrición', ['Sin dificultad', 'Sospecha/disfagia', 'Dieta modificada']),
           A('Continencia/autonomía'),
           A('Cognición/conducta/ánimo'),
-          G('Caídas', [{ l: 'N.º últimas 4 semanas' }, { l: 'Circunstancias', w: 320 }]),
+          G('Caídas', [
+            { l: 'N.º últimas 4 semanas', f: FORMATOS.entero(0, 999) },
+            { l: 'Circunstancias', w: 320 },
+          ]),
           A('Ayudas técnicas/entorno'),
           A('Metas del paciente'),
         ),

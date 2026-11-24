@@ -1,4 +1,4 @@
-import type { Ficha, FuenteDato } from '../fichas/dsl.js';
+import type { Ficha, Formato, FuenteDato } from '../fichas/dsl.js';
 
 // SPEC C §7 y ADR-0005: el contenido es un mapa plano clave → valor. Ningún
 // campo es obligatorio (RF-C07); lo que se valida es la forma: claves de la
@@ -9,7 +9,7 @@ export type Contenido = Record<string, ValorContenido>;
 
 type Regla =
   | { k: 'texto'; max: number }
-  | { k: 'numero' }
+  | { k: 'numero'; formato?: Formato }
   | { k: 'fecha' }
   | { k: 'hora' }
   | { k: 'unica'; opciones: string[] }
@@ -29,7 +29,34 @@ const NUMERO = /^-?(\d+([.,]\d+)?|[.,]\d+)$/;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+const PRESION = /^\d{2,3}\/\d{2,3}$/;
+
 const cache = new WeakMap<Ficha, Esquema>();
+
+function numero(formato: Formato | undefined): Regla {
+  return formato ? { k: 'numero', formato } : { k: 'numero' };
+}
+
+function conComa(n: number): string {
+  return String(n).replace('.', ',');
+}
+
+/**
+ * Comprueba un valor numérico contra su formato; la web aplica la misma regla
+ * antes de enviar (trazalia-web, ficha-formulario.ts).
+ */
+export function errorDeFormato(texto: string, formato: Formato | undefined): string | null {
+  if (formato?.k === 'presion') {
+    return PRESION.test(texto) ? null : 'Escribe la presión como 120/80.';
+  }
+  if (!NUMERO.test(texto) || texto.length > 20) return 'Debe ser un número.';
+  if (!formato) return null;
+  if (formato.k === 'entero' && !/^-?\d+$/.test(texto)) return 'Debe ser un número entero.';
+  const valor = Number(texto.replace(',', '.'));
+  return valor < formato.min || valor > formato.max
+    ? `Debe estar entre ${conComa(formato.min)} y ${conComa(formato.max)}.`
+    : null;
+}
 
 /** Reglas por clave, derivadas de la definición de la ficha. */
 export function esquemaDe(ficha: Ficha): Esquema {
@@ -52,6 +79,8 @@ export function esquemaDe(ficha: Ficha): Esquema {
               reglas.set(c.id, { k: 'texto', max: LARGO });
               break;
             case 'numero':
+              reglas.set(c.id, numero(c.formato));
+              break;
             case 'imc':
               reglas.set(c.id, { k: 'numero' });
               break;
@@ -73,7 +102,9 @@ export function esquemaDe(ficha: Ficha): Esquema {
                     ? { k: 'fecha' }
                     : p.tipo === 'hora'
                       ? { k: 'hora' }
-                      : { k: 'texto', max: CORTO },
+                      : p.formato
+                        ? numero(p.formato)
+                        : { k: 'texto', max: CORTO },
                 );
               }
               break;
@@ -88,7 +119,11 @@ export function esquemaDe(ficha: Ficha): Esquema {
               case 'texto':
                 reglas.set(
                   celda.id,
-                  celda.tipo === 'fecha' ? { k: 'fecha' } : { k: 'texto', max: CORTO },
+                  celda.tipo === 'fecha'
+                    ? { k: 'fecha' }
+                    : celda.formato
+                      ? numero(celda.formato)
+                      : { k: 'texto', max: CORTO },
                 );
                 if (celda.habilitadaPor) dependencias.set(celda.id, celda.habilitadaPor);
                 break;
@@ -101,7 +136,10 @@ export function esquemaDe(ficha: Ficha): Esquema {
               case 'partes':
                 for (const p of celda.partes) {
                   const clave = `${celda.id}.${p.id}`;
-                  reglas.set(clave, p.id === 'imc' ? { k: 'numero' } : { k: 'texto', max: CORTO });
+                  reglas.set(
+                    clave,
+                    p.id === 'imc' || p.formato ? numero(p.formato) : { k: 'texto', max: CORTO },
+                  );
                   if (celda.habilitadaPor) dependencias.set(clave, celda.habilitadaPor);
                 }
                 break;
@@ -137,7 +175,7 @@ function validarValor(regla: Regla, valor: unknown): string | null {
     case 'texto':
       return texto.length <= regla.max ? null : `Máximo ${regla.max} caracteres.`;
     case 'numero':
-      return NUMERO.test(texto) && texto.length <= 20 ? null : 'Debe ser un número.';
+      return errorDeFormato(texto, regla.formato);
     case 'fecha':
       return FECHA.test(texto) ? null : 'Fecha no válida.';
     case 'hora':
