@@ -6,7 +6,7 @@ vi.mock('nodemailer', () => ({
   createTransport: vi.fn(() => ({ sendMail })),
 }));
 
-const { CorreoServicio } = await import('./correo.servicio.js');
+const { CorreoServicio, separarRemitente } = await import('./correo.servicio.js');
 
 const VALORES: Record<string, unknown> = {
   SMTP_HOST: 'localhost',
@@ -14,10 +14,12 @@ const VALORES: Record<string, unknown> = {
   SMTP_USUARIO: undefined,
   SMTP_CONTRASENA: undefined,
   CORREO_REMITENTE: 'Trazalia <no-responder@trazalia.local>',
+  BREVO_API_KEY: undefined,
 };
 
-function crearConfig(): ConfigService<never, true> {
-  return { get: (clave: string) => VALORES[clave] } as unknown as ConfigService<never, true>;
+function crearConfig(extra: Record<string, unknown> = {}): ConfigService<never, true> {
+  const valores = { ...VALORES, ...extra };
+  return { get: (clave: string) => valores[clave] } as unknown as ConfigService<never, true>;
 }
 
 const DATOS = {
@@ -95,5 +97,70 @@ describe('CorreoServicio', () => {
     const llamada = sendMail.mock.calls[0][0] as { subject: string; html: string };
     expect(llamada.subject).toBe('Tu contraseña de Trazalia cambió');
     expect(llamada.html).toContain('V123');
+  });
+
+  describe('con BREVO_API_KEY (calidad en Render, sin SMTP)', () => {
+    const fetchFalso = vi.fn();
+
+    beforeEach(() => {
+      fetchFalso.mockReset();
+      vi.stubGlobal('fetch', fetchFalso);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const config = () =>
+      crearConfig({ BREVO_API_KEY: 'xkeysib-prueba', CORREO_REMITENTE: 'Trazalia <yo@gmail.com>' });
+
+    it('envía por la API HTTPS de Brevo y no usa SMTP', async () => {
+      fetchFalso.mockResolvedValue(new Response('{"messageId":"1"}', { status: 201 }));
+
+      await new CorreoServicio(config()).enviarInvitacion(DATOS);
+
+      expect(sendMail).not.toHaveBeenCalled();
+      expect(fetchFalso).toHaveBeenCalledOnce();
+      const [url, opciones] = fetchFalso.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('https://api.brevo.com/v3/smtp/email');
+      expect(opciones.method).toBe('POST');
+      expect((opciones.headers as Record<string, string>)['api-key']).toBe('xkeysib-prueba');
+      const cuerpo = JSON.parse(opciones.body as string) as {
+        sender: unknown;
+        to: unknown;
+        subject: string;
+        htmlContent: string;
+      };
+      expect(cuerpo.sender).toEqual({ name: 'Trazalia', email: 'yo@gmail.com' });
+      expect(cuerpo.to).toEqual([{ email: 'ana@b.com' }]);
+      expect(cuerpo.subject).toBe('Te invitaron a Trazalia: activa tu cuenta');
+      expect(cuerpo.htmlContent).toContain('http://localhost:4200/activar-cuenta?token=abc');
+    });
+
+    it('nunca lanza si Brevo rechaza el envío', async () => {
+      fetchFalso.mockResolvedValue(new Response('{"code":"unauthorized"}', { status: 401 }));
+
+      await expect(new CorreoServicio(config()).enviarInvitacion(DATOS)).resolves.toBeUndefined();
+    });
+
+    it('nunca lanza si la red falla', async () => {
+      fetchFalso.mockRejectedValue(new TypeError('fetch failed'));
+
+      await expect(new CorreoServicio(config()).enviarInvitacion(DATOS)).resolves.toBeUndefined();
+    });
+  });
+});
+
+describe('separarRemitente', () => {
+  it('separa nombre y correo', () => {
+    expect(separarRemitente('Trazalia <yo@gmail.com>')).toEqual({
+      name: 'Trazalia',
+      email: 'yo@gmail.com',
+    });
+  });
+
+  it('acepta solo el correo', () => {
+    expect(separarRemitente('yo@gmail.com')).toEqual({ email: 'yo@gmail.com' });
+    expect(separarRemitente('<yo@gmail.com>')).toEqual({ email: 'yo@gmail.com' });
   });
 });

@@ -32,6 +32,10 @@ const esquemaEntorno = z.object({
   SMTP_USUARIO: z.string().optional(),
   SMTP_CONTRASENA: z.string().optional(),
   CORREO_REMITENTE: z.string().default('Trazalia <no-responder@trazalia.local>'),
+  // Si existe, el correo sale por la API HTTPS de Brevo en lugar de SMTP: Render
+  // gratis bloquea los puertos SMTP de salida. CORREO_REMITENTE debe estar
+  // verificado en Brevo.
+  BREVO_API_KEY: z.string().optional(),
 
   // Bloqueo por fuerza bruta (BR-035, DP-05: "ejemplo inicial... calibrar").
   BLOQUEO_UMBRAL_INTENTOS: z.coerce.number().int().positive().default(10),

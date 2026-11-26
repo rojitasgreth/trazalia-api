@@ -22,10 +22,6 @@ services:
         value: 'true'
       - key: ZONA_HORARIA_NEGOCIO
         value: America/Caracas
-      - key: SMTP_HOST
-        value: smtp-relay.brevo.com
-      - key: SMTP_PUERTO
-        value: '587'
       # URL pública del servicio, p. ej. https://trazalia-calidad.onrender.com
       - key: ORIGEN_WEB
         sync: false
@@ -43,10 +39,9 @@ services:
         sync: false
       - key: JWT_REFRESH_CLAVE_PUBLICA
         sync: false
-      # Brevo: Settings → SMTP & API → SMTP.
-      - key: SMTP_USUARIO
-        sync: false
-      - key: SMTP_CONTRASENA
+      # Render gratis bloquea los puertos SMTP de salida: el correo va por la
+      # API HTTPS de Brevo (SMTP & API → API Keys).
+      - key: BREVO_API_KEY
         sync: false
       # Remitente verificado en Brevo, p. ej. "Trazalia <tu-correo@gmail.com>"
       - key: CORREO_REMITENTE

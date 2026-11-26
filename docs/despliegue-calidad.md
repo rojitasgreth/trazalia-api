@@ -8,7 +8,7 @@ un ping de cron-job.org cada 10 minutos evita que Render la duerma.
 | --------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
 | Render (servicio web) | 512 MB, 0,1 CPU   | Se duerme tras 15 min sin tráfico; 750 h/mes (un servicio despierto todo el mes usa 744 h); 5 GB de tráfico/mes |
 | Neon (PostgreSQL)     | 1 GB por proyecto | 100 horas de cómputo/mes; se suspende tras 5 min sin uso y despierta sola                                       |
-| Brevo (SMTP)          | 300 correos/día   | Remitente verificado                                                                                            |
+| Brevo (API de correo) | 300 correos/día   | Remitente verificado                                                                                            |
 | cron-job.org          | Gratis            | —                                                                                                               |
 
 > Es un entorno de **pruebas con datos falsos**, no de producción. La migración
@@ -56,24 +56,31 @@ calidad: no reutilices las de desarrollo.
 
 ## 3. Brevo (correo)
 
+Render gratis bloquea la salida a los puertos SMTP (25, 465 y 587), así que ni
+Gmail ni Brevo funcionan por SMTP. La API envía por la **API HTTPS de Brevo**
+cuando existe `BREVO_API_KEY`.
+
 1. Crea una cuenta en <https://www.brevo.com>.
 2. **Senders, domains & dedicated IPs → Senders → Add a sender:** el correo que
-   firmará los mensajes. Verifícalo con el código que te llega.
-3. **SMTP & API → SMTP:** copia el _Login_ (algo como `…@smtp-brevo.com`) y genera
-   una _SMTP key_.
+   firmará los mensajes (puede ser un Gmail). Verifícalo con el código que te
+   llega a ese buzón.
+3. **SMTP & API → API Keys → Generate a new API key:** cópiala (empieza por
+   `xkeysib-`); Brevo solo la muestra una vez.
 
 ```
-SMTP_USUARIO=<Login de Brevo>
-SMTP_CONTRASENA=<SMTP key>
-CORREO_REMITENTE=Trazalia <el-correo-verificado@ejemplo.com>
+BREVO_API_KEY=<API key de Brevo>
+CORREO_REMITENTE=Trazalia <el-correo-verificado@gmail.com>
 ```
+
+Con un remitente `@gmail.com` enviado desde Brevo, algunos correos pueden caer
+en spam: para pruebas basta; en producción conviene un dominio propio.
 
 ## 4. Render (aplicación)
 
 1. Crea una cuenta en <https://render.com> entrando con GitHub.
 2. **New → Blueprint** y elige el repositorio `trazalia-api`. Render lee
    `render.yaml` y crea el servicio `trazalia-calidad` en el plan gratis.
-3. Te pedirá los secretos: las dos URL de Neon, las cuatro claves JWT, los tres
+3. Te pedirá los secretos: las dos URL de Neon, las cuatro claves JWT, los dos
    datos de Brevo y `ORIGEN_WEB`. Para `ORIGEN_WEB` usa
    `https://trazalia-calidad.onrender.com`; si Render le pone otro nombre al
    servicio, corrígelo luego en **Environment** con la URL real (sin `/` al final).
@@ -101,5 +108,6 @@ puede dormirse cuando nadie usa la aplicación y no se agotan sus 100 horas.
   cambio solo en `trazalia-web` necesita **Manual Deploy** en Render.
 - **No corre en calidad:** el worker que archiva la auditoría cada semestre
   (Render gratis no tiene workers). No afecta a las pruebas.
-- **Correo:** las invitaciones y la recuperación de contraseña salen por Brevo
-  con TLS obligatorio.
+- **Correo:** las invitaciones y la recuperación de contraseña salen por la API
+  HTTPS de Brevo. Si no llegan, busca `No se pudo enviar el correo` en los
+  **Logs** de Render: ahí aparece la respuesta de Brevo.
