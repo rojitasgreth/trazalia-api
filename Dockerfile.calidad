@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+# Imagen del entorno de calidad (Render, plan gratis): una sola aplicación con la
+# API y la web compilada en el mismo dominio, para que las cookies SameSite=Lax
+# funcionen sin proxy propio (DP-08). Al arrancar aplica las migraciones.
+# Guía: docs/despliegue-calidad.md
+
+# --- Web (trazalia-web, repositorio público) ---------------------------------
+FROM node:26-bookworm-slim AS web
+ARG WEB_REPO=https://github.com/rojitasgreth/trazalia-web.git
+ARG WEB_RAMA=main
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /web
+# Cambia cada vez que la rama avanza: evita que la caché de Docker deje una web vieja.
+ADD https://api.github.com/repos/rojitasgreth/trazalia-web/commits/${WEB_RAMA} /tmp/version-web.json
+RUN git clone --depth 1 --branch "$WEB_RAMA" "$WEB_REPO" . && npm ci && npm run build
+
+# --- API ------------------------------------------------------------------------
+FROM node:26-bookworm-slim AS api
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+# Generar el cliente no se conecta a la base; la URL solo satisface prisma.config.ts.
+RUN DATABASE_URL_MIGRACIONES=postgresql://construccion@localhost/construccion npm run prisma:generar \
+ && npm run build
+
+# --- Ejecución ------------------------------------------------------------------
+FROM node:26-bookworm-slim
+ENV NODE_ENV=production
+WORKDIR /app
+# Sin "npm prune": la CLI de Prisma (dependencia de desarrollo) aplica las migraciones.
+COPY --from=api /app/package.json /app/prisma.config.ts ./
+COPY --from=api /app/node_modules ./node_modules
+COPY --from=api /app/prisma ./prisma
+COPY --from=api /app/dist ./dist
+COPY --from=web /web/dist/trazalia-web/browser ./dist/web
+USER node
+EXPOSE 10000
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/main.js"]

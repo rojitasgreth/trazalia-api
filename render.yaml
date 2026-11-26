@@ -1,0 +1,53 @@
+# Blueprint del entorno de calidad en Render (plan gratis). Los valores con
+# "sync: false" son secretos: Render los pide al crear el Blueprint y no viven
+# en el repositorio. Guía paso a paso: docs/despliegue-calidad.md
+services:
+  - type: web
+    name: trazalia-calidad
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: main
+    dockerfilePath: ./Dockerfile.calidad
+    # La página principal no consulta la base: así ni este chequeo ni el ping
+    # externo despiertan a Neon, cuyo plan gratis da 100 horas de cómputo al mes.
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUERTO
+        value: '10000'
+      - key: CONFIAR_PROXY
+        value: 'true'
+      - key: ZONA_HORARIA_NEGOCIO
+        value: America/Caracas
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PUERTO
+        value: '587'
+      # URL pública del servicio, p. ej. https://trazalia-calidad.onrender.com
+      - key: ORIGEN_WEB
+        sync: false
+      # Neon: rol trazalia_app (aplicación) y rol trazalia_migrador (migraciones).
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_MIGRACIONES
+        sync: false
+      # Generar un par nuevo para este entorno: npm run jwt:generar-claves
+      - key: JWT_ACCESS_CLAVE_PRIVADA
+        sync: false
+      - key: JWT_ACCESS_CLAVE_PUBLICA
+        sync: false
+      - key: JWT_REFRESH_CLAVE_PRIVADA
+        sync: false
+      - key: JWT_REFRESH_CLAVE_PUBLICA
+        sync: false
+      # Brevo: Settings → SMTP & API → SMTP.
+      - key: SMTP_USUARIO
+        sync: false
+      - key: SMTP_CONTRASENA
+        sync: false
+      # Remitente verificado en Brevo, p. ej. "Trazalia <tu-correo@gmail.com>"
+      - key: CORREO_REMITENTE
+        sync: false

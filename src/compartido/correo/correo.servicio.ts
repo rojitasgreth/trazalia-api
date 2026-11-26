@@ -52,6 +52,8 @@ export class CorreoServicio {
       host: config.get('SMTP_HOST', { infer: true }),
       port: config.get('SMTP_PUERTO', { infer: true }),
       secure: false,
+      // Fuera de desarrollo (Mailpit) el envío exige STARTTLS (Brevo, puerto 587).
+      requireTLS: config.get('NODE_ENV', { infer: true }) === 'production',
       auth: this.credenciales(config),
     });
   }

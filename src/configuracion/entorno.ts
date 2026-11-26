@@ -11,6 +11,12 @@ const esquemaEntorno = z.object({
   // Origen público del frontend: se usa para CORS y para validar Origin (DP-08).
   ORIGEN_WEB: z.url(),
   ZONA_HORARIA_NEGOCIO: z.string().default('America/Caracas'),
+  // "true" cuando la API está detrás del proxy de una plataforma (Render): toma
+  // la IP del cliente de X-Forwarded-For para el rate limiting (BR-035).
+  CONFIAR_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((valor) => valor === 'true'),
 
   // Claves EdDSA (Ed25519) para JWT, DP-11: JWK en base64url. Generar con
   // `npm run jwt:generar-claves`.
